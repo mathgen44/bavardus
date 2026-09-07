@@ -67,6 +67,9 @@ class ConfigPriseDeParole:
     sur_alerte: bool = True
     spontanee: ConfigSpontanee = field(default_factory=ConfigSpontanee)
     max_messages_par_minute: int = 6
+    # Les autres bots de la chaîne. Sans cette liste, deux bots qui se
+    # répondent poliment peuvent saturer un chat en quelques secondes.
+    comptes_ignores: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,6 +216,8 @@ def depuis_dict(donnees: dict[str, Any]) -> Config:
                 max_par_heure=int(sp.get("max_par_heure", 4)),
             ),
             max_messages_par_minute=int(p.get("max_messages_par_minute", 6)),
+            comptes_ignores=tuple(
+                str(c).lower() for c in (p.get("comptes_ignores") or ())),
         ),
         moderation=ConfigModeration(
             active=bool(mo.get("active", False)),
@@ -315,6 +320,7 @@ def en_dict(config: Config) -> dict[str, Any]:
                 "max_par_heure": config.prise_de_parole.spontanee.max_par_heure,
             },
             "max_messages_par_minute": config.prise_de_parole.max_messages_par_minute,
+            "comptes_ignores": list(config.prise_de_parole.comptes_ignores),
         },
         "moderation": {
             "active": config.moderation.active,

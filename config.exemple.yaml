@@ -43,6 +43,12 @@ prise_de_parole:
     max_par_heure: 4        # garde-fou anti-bavardage
   # Anti-flood global, toutes causes confondues.
   max_messages_par_minute: 6
+  # Les autres bots de la chaîne, en minuscules. Deux bots qui se répondent
+  # poliment saturent un chat en quelques secondes.
+  comptes_ignores:
+    - nightbot
+    - streamelements
+    - moobot
 
 moderation:
   active: false
