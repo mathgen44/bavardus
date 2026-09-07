@@ -3,7 +3,7 @@
 > **Source de vérité du projet.** À mettre à jour à chaque étape.
 > Une copie miroir est maintenue dans le projet Claude « StreamBot ».
 
-**Dernière mise à jour :** 2026-09-07 (02h00) — **phase 1 close**
+**Dernière mise à jour :** 2026-09-07 (15h50) — **le bot est vivant**
 
 > ⚠️ **Fichier reconstitué le 2026-09-06** — l'original avait disparu. Conséquence :
 > **la numérotation d'origine des bugs est partiellement perdue.** Un balayage du code a
@@ -96,7 +96,36 @@ problèmes de modération au lieu d'en résoudre — ce qui contredit le point 4
 L'échec de `gemma4:e4b` sur la situation 5 n'est pas bloquant : **D17** a retiré cette
 responsabilité au modèle.
 
-### Phase 2 — Architecture → **Q16**, chantier en cours d'ouverture
+### Phase 2 — Architecture ✅ **CLOSE le 2026-09-07**
+
+Structure arrêtée dans [`architecture.md`](architecture.md) : chaîne
+Sources → Décideur → Générateur → Émetteur, un conteneur, interface en rendu serveur,
+authentification par OAuth Twitch (D19 à D23).
+
+### Phase 3 — Construction
+
+| # | Étape | État |
+|---|---|---|
+| 1 | `config.py`, `stockage/`, `modeles/` | ✅ 43 tests |
+| 2 | `noyau/` — Décideur, Générateur, Émetteur | ✅ 88 tests |
+| 3 | `sources/twitch.py` — EventSub et Helix | ✅ 112 tests |
+| 4 | **Bot vivant en ligne de commande** | ✅ **JALON ATTEINT le 2026-09-07** |
+| 5 | `sources/streamlabs.py` (la minuterie est faite) | ⏳ suivante |
+| 6 | `web/` : authentification, réglages, journal en direct | ⏳ |
+| 7 | `Dockerfile` et `compose.yaml` | ⏳ |
+
+**Le jalon de vérité est franchi.** Bavardus lit le chat de `mathgen`, décide s'il doit
+répondre, interroge `gemma4:e4b` et publie sous son propre compte. Tout ce qui suit est du
+confort ou de l'ouverture aux tiers — plus aucune inconnue de conception.
+
+Constaté au premier démarrage réel :
+
+- `--verifier` a nommé les trois points manquants (base_url, URL d'Ollama, jetons) avant
+  toute tentative de connexion. G11 fait son travail.
+- **B13** — `importer_jetons.py` traitait un jeton d'accès expiré comme une panne. Un jeton
+  Twitch vit environ quatre heures : après une nuit il est expiré **par construction**, et
+  le `refresh_token` existe précisément pour ça. Corrigé : le script renouvelle, puis
+  vérifie l'identité du jeton renouvelé.
 
 ---
 
@@ -217,12 +246,15 @@ proxy host.**
 
 ## 8. Notes de reprise
 
-- Le code tourne sur la VM dans `~/Bavardus` (venv `.venv`). Le dépôt git est créé côté PC
-  dans `D:\GIT\StreamBot` — **la VM devra basculer sur un clone** pour arrêter la
-  divergence entre les deux copies.
-- `--auth`, `--check`, `--refresh` et `--say` n'utilisent que la bibliothèque standard.
-  `--listen` et `test_streamlabs.py` exigent le venv.
-- Aucun code de production écrit à ce jour.
+**Méthode de travail établie :** Claude écrit dans le dépôt côté PC (`D:\GIT\StreamBot`),
+Hervé pousse depuis Windows, puis tire et exécute sur la VM (`~/Bavardus`, clone du dépôt,
+venv `.venv`). Un `git push` / `git pull` entre chaque étape — il n'y a pas de raccourci.
+
+- `config.yaml`, `.env` et `jetons.json` sont hors du dépôt (G5) : un `git pull` ne les
+  écrase jamais.
+- Démarrage : `python3 -m bavardus --verifier` puis `python3 -m bavardus`.
+- En attendant l'interface web, les jetons viennent de
+  `outils/diag_twitch.py --auth` puis `outils/importer_jetons.py`.
 
 **⚠️ Avant de basculer la VM sur le clone :** `~/Bavardus` contient encore l'ancienne
 arborescence à plat (`test_*.py`), plus `.env`, `.twitch_tokens.json` et `.venv`. Faire le
@@ -230,6 +262,7 @@ ménage **avant** le clone, en préservant les deux fichiers de secrets — ils 
 dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
 `python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
 
-**Suite :** construire, en commençant par l'étape 1 de la phase 3. Restent en marge :
-`/mod bavardus` si ce n'est pas fait (R14), et confirmer le mode Streamlabs (normal ou
-`--raw`) avant d'écrire `sources/streamlabs.py`.
+**Suite :** étape 5, `sources/streamlabs.py`. **Bloquant :** savoir si
+`diag_streamlabs.py` a fonctionné en mode normal (`python-socketio` 4.6.1) ou s'il a fallu
+le plan B `--raw` — cela décide du connecteur à écrire. Reste aussi en marge :
+`/mod bavardus` si ce n'est pas fait (R14).
