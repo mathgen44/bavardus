@@ -1,0 +1,11 @@
+# Garde-fou G5 : secrets, jamais dans git.
+.env
+.twitch_tokens.json
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Dossier tampon : le pont Cowork ne peut pas supprimer, il déplace ici.
+_to_delete/
