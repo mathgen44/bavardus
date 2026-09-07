@@ -1,11 +1,20 @@
-# Garde-fou G5 : secrets, jamais dans git.
+# Garde-fou G5 : secrets et état d'instance, jamais dans git.
 .env
 .twitch_tokens.json
+jetons.json
+config.yaml
+
+# Données d'instance (volume Docker en production).
+donnees/
+*.db
+*.db-wal
+*.db-shm
 
 __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
 
 # Dossier tampon : le pont Cowork ne peut pas supprimer, il déplace ici.
 _to_delete/

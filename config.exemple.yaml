@@ -1,0 +1,53 @@
+# Bavardus — configuration. Copier en config.yaml.
+# Les secrets ne sont PAS ici : ils vivent dans .env et jetons.json (G5).
+#
+# Ce fichier est rechargé à chaud : le modifier ne coupe pas le bot.
+
+# D23 : toutes les URL en découlent. Explicite, jamais déduite des en-têtes.
+# L'URL à déclarer sur la console développeur Twitch est, exactement :
+#     <base_url>/api/twitch/callback
+# Twitch autorise http://localhost — inutile d'exposer quoi que ce soit.
+base_url: http://localhost:8475
+
+twitch:
+  chaine: ""            # login de la chaîne à écouter, ex. mathgen
+
+modele:
+  # ollama (API native, seule à honorer think:false — D16)
+  # compatible_openai (OpenRouter et équivalents — D13)
+  fournisseur: ollama
+  url: http://localhost:11434
+  nom: gemma4:e4b       # D18
+  plafond_jetons: 60    # D5
+  temperature: 0.7
+  reflexion: false      # D16 — ne passer à true qu'en sachant pourquoi
+
+persona: |
+  Tu es Bavardus, le bot d'une chaîne Twitch.
+  Tu es complice et taquin, jamais méchant, jamais donneur de leçons.
+  Tu réponds en français, en une phrase courte.
+  Tu ne parles jamais de toi comme d'une intelligence artificielle.
+  Si tu ne peux pas savoir quelque chose, tu le dis simplement au lieu de l'inventer.
+
+conversation:
+  contexte_messages: 12   # messages de chat gardés comme contexte
+  longueur_max: 500       # G4 — plafond dur de Twitch
+
+prise_de_parole:
+  sur_mention: true       # quelqu'un écrit @lebot
+  sur_commande: true      # !commande
+  sur_alerte: true        # follow, don, abonnement, raid (via Streamlabs — D15)
+  spontanee:
+    active: false
+    minutes_de_silence: 5   # délai avant de relancer le chat
+    max_par_heure: 4        # garde-fou anti-bavardage
+  # Anti-flood global, toutes causes confondues.
+  max_messages_par_minute: 6
+
+moderation:
+  active: false
+  mots_interdits: []
+  action: supprimer       # supprimer | avertir | exclure
+
+journal:
+  niveau: INFO            # DEBUG | INFO | WARNING | ERROR
