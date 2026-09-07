@@ -111,6 +111,8 @@ responsabilité au modèle.
 | **R12** | IP publique dynamique : désynchronisation de `bavardus.mathgen.fr` | 🟡 à surveiller — G11 |
 | **R13** | Bot non autorisé → lecture en 403 alors que l'envoi marche | ✅ écarté |
 | **R14** | Hors modération, limites anti-spam sévères : messages jetés en silence | 🟡 `bavardus` est-il `/mod` ? |
+| **R17** | Un seul processus : redémarrer l'interface coupe le bot | 🟡 accepté (D19), à documenter |
+| **R16** | Deux jeux de jetons à rafraîchir (bot et diffuseur). Celui du diffuseur expire aussi : sans rafraîchissement, l'interface se ferme au propriétaire sans explication | 🟡 à traiter dès `web/auth.py` |
 | **R15** | Le mode réflexion, actif par défaut, consomme tout le plafond D5 et produit une réponse vide — panne totale et silencieuse | 🟡 mitigé par D16 + G14 |
 
 ## 4. Décisions
@@ -137,6 +139,8 @@ responsabilité au modèle.
 | **G12** | Alerte bruyante si le jeton appartient au diffuseur (`user_id == broadcaster_id`) |
 | **G13** | Ne jamais conclure d'un envoi réussi que la lecture fonctionne |
 | **G14** | **Une réponse vide du modèle n'est jamais postée et doit être journalisée avec sa cause** (`finish_reason`, présence d'un champ `reasoning`) |
+| **G18** | L'Émetteur est le **seul** point de sortie vers Twitch : G4 et G14 y sont appliqués une fois, jamais dupliqués ailleurs |
+| **G17** | Le Décideur ne consulte jamais le modèle, et journalise la raison de chaque décision |
 | **G16** | Les outils de diagnostic portent le préfixe `diag_`, jamais `test_` : ils exigent de vrais identifiants et une interaction humaine, et `pytest` ne doit pas les collecter. `tests/` reste réservé aux vrais tests unitaires |
 | **G15** | Aucun contenu versionné ne porte le nom civil de l'auteur : `mathgen44` partout, y compris dans la configuration git locale du dépôt |
 
@@ -145,7 +149,7 @@ responsabilité au modèle.
 | Réf | Question | État |
 |---|---|---|
 | **Q15** | Quel modèle retenir ? | ✅ **tranché — `gemma4:e4b`** (D18) |
-| **Q16** | Architecture : découpage des services, API entre moteur et interface web, stockage de la configuration et des jetons | ⏳ **chantier suivant** |
+| **Q16** | Architecture | ✅ **tranchée le 2026-09-07** — voir [`architecture.md`](architecture.md) (D19 à D22) |
 
 ---
 
@@ -226,9 +230,6 @@ ménage **avant** le clone, en préservant les deux fichiers de secrets — ils 
 dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
 `python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
 
-**Suite :**
-
-1. **Q16 — architecture.** Découpage des services, API entre moteur et interface web,
-   stockage de la configuration et des jetons. En intégrant D16, D17 et G14.
-2. Premier code de production.
-3. `/mod bavardus` si ce n'est pas fait (R14) ; confirmer le mode Streamlabs.
+**Suite :** construire, en commençant par l'étape 1 de la phase 3. Restent en marge :
+`/mod bavardus` si ce n'est pas fait (R14), et confirmer le mode Streamlabs (normal ou
+`--raw`) avant d'écrire `sources/streamlabs.py`.
