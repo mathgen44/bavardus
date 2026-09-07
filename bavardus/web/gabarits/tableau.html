@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titre %}Bavardus{% endblock %}
+{% block entete %}
+<header class="principal">
+  <h1>Bavardus</h1>
+  <span class="qui">{{ identite.login }} · <a href="/deconnexion">déconnexion</a></span>
+</header>
+{% endblock %}
+{% block contenu %}
+
+<div class="carte">
+  <h2>Compte du bot</h2>
+  {% if bot %}
+    <p class="aide">Le bot publie sous <strong>{{ bot.login }}</strong>
+      (id {{ bot.user_id }}).
+      {% if bot.perime %}Son jeton est expiré ; il sera renouvelé automatiquement.
+      {% else %}Jeton valable encore {{ bot.secondes_restantes // 60 }} min.{% endif %}</p>
+    <a class="bouton discret" href="/api/twitch/connexion?usage=bot">
+      Réautoriser le compte du bot</a>
+  {% else %}
+    <p class="aide">Aucun compte de bot autorisé : Bavardus ne peut ni lire ni écrire
+      dans le chat.</p>
+    <div class="message alerte">
+      Utilise une <strong>fenêtre de navigation privée</strong> et connecte-toi avec le
+      compte dédié au bot. Twitch conserve la session du navigateur : sans cette
+      précaution, tu repartiras avec ton propre compte sans que rien ne le signale, et
+      le bot publierait sous ton pseudo.
+    </div>
+    <a class="bouton" href="/api/twitch/connexion?usage=bot">Autoriser le compte du bot</a>
+  {% endif %}
+</div>
+
+<div class="carte">
+  <h2>État</h2>
+  <p class="aide">Chaîne écoutée : <strong>{{ config.twitch.chaine or "non configurée" }}</strong>
+    · Modèle : <strong>{{ config.modele.nom }}</strong> via {{ config.modele.fournisseur }}
+    · Prise de parole spontanée :
+    <strong>{{ "activée" if config.prise_de_parole.spontanee.active else "désactivée" }}</strong></p>
+  <p class="aide">URL de redirection déclarée sur Twitch :</p>
+  <code class="copiable">{{ config.url_redirection }}</code>
+</div>
+
+<div class="carte">
+  <h2>Réglages</h2>
+  <p class="aide">Persona, fréquence des interventions, commandes et modération —
+    à venir dans la prochaine étape. En attendant, <code>config.yaml</code> reste
+    modifiable à la main : il est rechargé sans redémarrer le bot.</p>
+</div>
+{% endblock %}

@@ -13,11 +13,19 @@ compatible avec les alertes Streamlabs.
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp config.exemple.yaml config.yaml     # puis renseigner twitch.chaine et modele.url
-cp .env.exemple .env                   # puis renseigner les identifiants Twitch
-python3 outils/diag_twitch.py --auth   # autoriser le compte du bot
+cp config.exemple.yaml config.yaml     # puis ajuster base_url et modele.url
+python3 -m bavardus --web-seul         # ouvrir l'interface et suivre l'assistant
+```
+
+L'assistant d'installation demande les identifiants de ton application Twitch, affiche
+l'URL de redirection exacte à y déclarer, puis enregistre ton compte de diffuseur comme
+propriétaire de l'instance. Le compte du bot s'autorise ensuite depuis le tableau de bord.
+
+Une fois configuré :
+
+```bash
 python3 -m bavardus --verifier         # contrôler l'installation
-python3 -m bavardus                    # en ligne
+python3 -m bavardus                    # bot + interface web
 ```
 
 `--verifier` contrôle tout ce qui peut manquer — chaîne, identifiants, jetons,

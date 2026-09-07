@@ -56,6 +56,38 @@ def lire_env(chemin: Path) -> dict[str, str]:
     return valeurs
 
 
+def ecrire_env(racine: Path, valeurs: dict[str, str]) -> None:
+    """Fusionne des valeurs dans le .env, en préservant le reste du fichier.
+
+    Chemin d'écriture de l'assistant d'installation : l'utilisateur colle son
+    `client_secret` dans un formulaire plutôt que d'ouvrir un éditeur en SSH.
+    Les lignes existantes — commentaires compris — sont conservées : le .env
+    d'un utilisateur peut porter des annotations qui lui sont utiles.
+    """
+    chemin = Path(racine) / ".env"
+    lignes = chemin.read_text(encoding="utf-8").splitlines() if chemin.exists() else []
+    restant = dict(valeurs)
+
+    sortie = []
+    for ligne in lignes:
+        nu = ligne.strip()
+        if nu and not nu.startswith("#") and "=" in nu:
+            cle = nu.split("=", 1)[0].strip()
+            if cle in restant:
+                sortie.append(f"{cle}={restant.pop(cle)}")
+                continue
+        sortie.append(ligne)
+    for cle, valeur in restant.items():
+        sortie.append(f"{cle}={valeur}")
+
+    temporaire = chemin.with_suffix(".tmp")
+    descripteur = os.open(temporaire, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descripteur, "w", encoding="utf-8") as fichier:
+        fichier.write("\n".join(sortie).rstrip("\n") + "\n")
+    os.replace(temporaire, chemin)
+    os.chmod(chemin, 0o600)
+
+
 def charger(racine: Path) -> Secrets:
     fichier = lire_env(Path(racine) / ".env")
     origines = {cle: ".env" for cle in fichier}

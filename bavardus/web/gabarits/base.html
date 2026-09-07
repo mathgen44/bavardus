@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titre %}Bavardus{% endblock %}</title>
+<style>
+  :root {
+    --fond: #14131a; --carte: #1d1b26; --bord: #2f2c3c;
+    --texte: #e8e6ef; --doux: #a29fb3; --accent: #9b7dff;
+    --ok: #5dd39e; --alerte: #f0a868; --erreur: #f2777a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --fond:#f6f5f9; --carte:#fff; --bord:#e2e0ea; --texte:#1d1b26;
+            --doux:#5f5b70; --accent:#6b46e5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--fond); color:var(--texte);
+    font:15px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .page { max-width: 60rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  header.principal { display:flex; align-items:baseline; gap:1rem;
+    padding-bottom:1rem; border-bottom:1px solid var(--bord); margin-bottom:2rem; }
+  header.principal h1 { font-size:1.4rem; margin:0; letter-spacing:-.01em; }
+  header.principal .qui { margin-left:auto; color:var(--doux); font-size:.85rem; }
+  a { color: var(--accent); }
+  .carte { background:var(--carte); border:1px solid var(--bord);
+    border-radius:12px; padding:1.5rem; margin-bottom:1.25rem; }
+  .carte h2 { margin:0 0 .25rem; font-size:1.05rem; }
+  .carte p.aide { margin:.25rem 0 1.25rem; color:var(--doux); font-size:.9rem; }
+  label { display:block; font-size:.85rem; color:var(--doux); margin:1rem 0 .35rem; }
+  input[type=text], input[type=password], textarea, select {
+    width:100%; padding:.6rem .75rem; background:var(--fond); color:var(--texte);
+    border:1px solid var(--bord); border-radius:8px; font:inherit; font-size:.92rem; }
+  textarea { min-height:7rem; resize:vertical; }
+  .bouton { display:inline-block; padding:.65rem 1.1rem; border-radius:8px;
+    background:var(--accent); color:#fff; border:0; font:inherit; font-weight:600;
+    cursor:pointer; text-decoration:none; }
+  .bouton.discret { background:transparent; color:var(--doux);
+    border:1px solid var(--bord); font-weight:500; }
+  code.copiable { display:block; padding:.7rem .85rem; background:var(--fond);
+    border:1px solid var(--bord); border-radius:8px; font-size:.85rem;
+    word-break:break-all; user-select:all; }
+  .message { padding:.85rem 1rem; border-radius:8px; margin-bottom:1.25rem;
+    font-size:.9rem; border:1px solid; }
+  .message.erreur { border-color:var(--erreur); color:var(--erreur); }
+  .message.ok { border-color:var(--ok); color:var(--ok); }
+  .message.alerte { border-color:var(--alerte); color:var(--alerte); }
+  .etapes { counter-reset:etape; list-style:none; padding:0; margin:0; }
+  .etapes > li { counter-increment:etape; position:relative; padding-left:2.5rem;
+    margin-bottom:2rem; }
+  .etapes > li::before { content:counter(etape); position:absolute; left:0; top:0;
+    width:1.7rem; height:1.7rem; border-radius:50%; background:var(--accent);
+    color:#fff; display:grid; place-items:center; font-size:.85rem; font-weight:700; }
+  .etapes h3 { margin:.15rem 0 .35rem; font-size:.98rem; }
+  .etapes p { margin:.35rem 0 .6rem; color:var(--doux); font-size:.9rem; }
+  footer { color:var(--doux); font-size:.8rem; text-align:center; margin-top:2rem; }
+</style>
+</head>
+<body>
+<div class="page">
+  {% block entete %}{% endblock %}
+  {% if erreur %}<div class="message erreur">{{ erreur }}</div>{% endif %}
+  {% if info %}<div class="message ok">{{ info }}</div>{% endif %}
+  {% block contenu %}{% endblock %}
+  <footer>Bavardus — <a href="https://github.com/mathgen44/bavardus">code source</a></footer>
+</div>
+</body>
+</html>

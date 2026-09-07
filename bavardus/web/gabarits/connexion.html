@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titre %}Connexion — Bavardus{% endblock %}
+{% block contenu %}
+<div class="carte" style="text-align:center; padding:3rem 1.5rem">
+  <h2>Bavardus</h2>
+  {% if proprietaire %}
+    <p class="aide">Cette instance appartient à <strong>{{ proprietaire }}</strong>.
+       Seul ce compte peut s'y connecter.</p>
+  {% else %}
+    <p class="aide">Aucun propriétaire n'est enregistré. Le premier compte qui se
+       connecte le devient, et verrouille l'installation.</p>
+  {% endif %}
+  <p style="margin-top:1.75rem">
+    <a class="bouton" href="/api/twitch/connexion?usage=proprietaire">
+      Se connecter avec Twitch</a>
+  </p>
+</div>
+{% endblock %}

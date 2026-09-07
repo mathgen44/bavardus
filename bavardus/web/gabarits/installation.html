@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block titre %}Installation — Bavardus{% endblock %}
+{% block contenu %}
+<div class="carte">
+  <h2>Installation de Bavardus</h2>
+  <p class="aide">Cette page n'est accessible que tant qu'aucun propriétaire n'est
+  enregistré. Le premier compte Twitch qui se connectera deviendra propriétaire de
+  cette instance, et l'installation se verrouillera sur lui.</p>
+
+  <ol class="etapes">
+    <li>
+      <h3>Créer une application Twitch</h3>
+      <p>Sur <a href="https://dev.twitch.tv/console/apps/create" target="_blank"
+         rel="noopener">la console développeur Twitch</a>, créer une application.
+         Le nom est libre, la catégorie « Chat Bot ».</p>
+    </li>
+    <li>
+      <h3>Déclarer l'URL de redirection</h3>
+      <p>Coller <strong>exactement</strong> cette adresse dans « OAuth Redirect URLs ».
+         Twitch la compare caractère par caractère : un « / » final, un
+         <code>http</code> au lieu de <code>https</code> ou un port oublié suffisent
+         à faire échouer la connexion.</p>
+      <code class="copiable">{{ url_redirection }}</code>
+      <p style="margin-top:.6rem">Elle est construite à partir de
+         <code>base_url</code> dans <code>config.yaml</code>, actuellement
+         <code>{{ base_url }}</code>. Si ce n'est pas l'adresse par laquelle tu
+         accèdes à cette page, corrige-la avant de continuer.</p>
+    </li>
+    <li>
+      <h3>Renseigner les identifiants</h3>
+      <p>Le <em>Client Secret</em> se génère sur la page de l'application. Il n'est
+         affiché qu'une fois.</p>
+      <form method="post" action="/installation">
+        <label for="client_id">Client ID</label>
+        <input type="text" id="client_id" name="client_id" required
+               value="{{ client_id }}" autocomplete="off" spellcheck="false">
+        <label for="client_secret">Client Secret</label>
+        <input type="password" id="client_secret" name="client_secret" required
+               autocomplete="off" spellcheck="false">
+        <label for="chaine">Chaîne à écouter</label>
+        <input type="text" id="chaine" name="chaine" required value="{{ chaine }}"
+               placeholder="le login de ta chaîne Twitch" autocomplete="off"
+               spellcheck="false">
+        <p style="margin-top:1.25rem">
+          <button class="bouton" type="submit">Enregistrer et continuer</button>
+        </p>
+      </form>
+    </li>
+  </ol>
+</div>
+{% endblock %}

@@ -28,6 +28,7 @@ from .sources.streamlabs import SourceStreamlabs
 from .sources.twitch import CanalTwitch, ClientTwitch, ErreurTwitch, SourceTwitch
 from .stockage.base import Base
 from .stockage.jetons import Jetons, JetonsIndisponibles
+from .web.app import Contexte, creer_application
 
 journal = logging.getLogger("bavardus")
 
@@ -87,6 +88,35 @@ async def verifier(gestionnaire, secrets, jetons, modele) -> list[str]:
     return problemes
 
 
+async def servir_interface(contexte, config, arret) -> None:
+    """Sert l'interface web dans la même boucle que le moteur (D19).
+
+    Un seul processus : l'interface et le bot partagent les mêmes objets, sans
+    API interne ni sérialisation. Le prix est R17 — redémarrer l'un coupe
+    l'autre — accepté pour un outil qu'on ne redéploie pas en continu.
+    """
+    import uvicorn
+
+    hote, port = "0.0.0.0", 8475
+    reste = config.base_url.split("://", 1)[-1]
+    if ":" in reste.split("/")[0]:
+        with contextlib.suppress(ValueError):
+            port = int(reste.split("/")[0].rsplit(":", 1)[1])
+
+    serveur = uvicorn.Server(uvicorn.Config(
+        creer_application(contexte), host=hote, port=port,
+        log_level="warning", access_log=False))
+    tache = asyncio.create_task(serveur.serve())
+    journal.info("interface web sur http://%s:%s (publiée en %s)",
+                 hote, port, config.base_url)
+    try:
+        await arret.wait()
+    finally:
+        serveur.should_exit = True
+        with contextlib.suppress(asyncio.CancelledError):
+            await tache
+
+
 async def demarrer(arguments) -> int:
     base_projet = racine()
     try:
@@ -107,6 +137,20 @@ async def demarrer(arguments) -> int:
 
     jetons = Jetons(base_projet / "jetons.json")
     modele = construire_modele(config.modele, secrets.cle_modele)
+
+    if arguments.web_seul:
+        configurer_journal(config.niveau_journal)
+        contexte = Contexte(racine=base_projet, gestionnaire_config=gestionnaire,
+                            jetons=jetons)
+        arret = asyncio.Event()
+        boucle = asyncio.get_running_loop()
+        for signal_arret in (signal.SIGINT, signal.SIGTERM):
+            with contextlib.suppress(NotImplementedError):
+                boucle.add_signal_handler(signal_arret, arret.set)
+        journal.info("mode installation : le bot ne démarre pas. "
+                     "Ouvrir %s pour configurer.", config.base_url)
+        await servir_interface(contexte, config, arret)
+        return 0
 
     problemes = await verifier(gestionnaire, secrets, jetons, modele)
     if problemes:
@@ -163,9 +207,13 @@ async def demarrer(arguments) -> int:
         with contextlib.suppress(NotImplementedError):
             boucle.add_signal_handler(signal_arret, arret.set)
 
+    contexte_web = Contexte(racine=base_projet, gestionnaire_config=gestionnaire,
+                            jetons=jetons, base=base)
+
     source = SourceTwitch(client, file, diffuseur["id"], str(id_bot))
     streamlabs = SourceStreamlabs(secrets.streamlabs_jeton_socket, file, boucle)
     taches = [
+        asyncio.create_task(servir_interface(contexte_web, config, arret), name="web"),
         asyncio.create_task(source.executer(arret), name="twitch"),
         asyncio.create_task(streamlabs.executer(arret), name="streamlabs"),
         asyncio.create_task(source_minuterie.executer(file, arret), name="minuterie"),
@@ -189,6 +237,9 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(prog="bavardus", description="Bot Twitch Bavardus")
     analyseur.add_argument("--verifier", action="store_true",
                            help="contrôler l'installation et sortir")
+    analyseur.add_argument("--web-seul", action="store_true",
+                           help="servir l'interface sans démarrer le bot — pour "
+                                "faire la première installation")
     arguments = analyseur.parse_args()
     try:
         return asyncio.run(demarrer(arguments))
