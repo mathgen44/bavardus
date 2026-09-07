@@ -24,6 +24,7 @@ from .noyau.emetteur import Emetteur
 from .noyau.generateur import Generateur
 from .noyau.moteur import Moteur
 from .sources import minuterie as source_minuterie
+from .sources.streamlabs import SourceStreamlabs
 from .sources.twitch import CanalTwitch, ClientTwitch, ErreurTwitch, SourceTwitch
 from .stockage.base import Base
 from .stockage.jetons import Jetons, JetonsIndisponibles
@@ -71,6 +72,14 @@ async def verifier(gestionnaire, secrets, jetons, modele) -> list[str]:
 
     joignable, message = await modele.disponible()
     (problemes.append if not joignable else journal.info)(message)
+
+    # Absence non bloquante : sans Streamlabs le chat fonctionne, seules les
+    # alertes manquent. Mieux vaut un bot partiel qu'un bot qui refuse de
+    # démarrer — mais il faut le dire, la panne serait sinon silencieuse.
+    if not secrets.streamlabs_jeton_socket:
+        journal.warning(
+            "STREAMLABS_SOCKET_TOKEN absent du .env : aucune réaction aux "
+            "follows, dons, abonnements et raids (D15). Le chat fonctionne.")
 
     # D23/R18 : une base_url fausse ne se voit qu'au moment d'une connexion.
     journal.info("URL de redirection à déclarer sur Twitch : %s",
@@ -155,8 +164,10 @@ async def demarrer(arguments) -> int:
             boucle.add_signal_handler(signal_arret, arret.set)
 
     source = SourceTwitch(client, file, diffuseur["id"], str(id_bot))
+    streamlabs = SourceStreamlabs(secrets.streamlabs_jeton_socket, file, boucle)
     taches = [
         asyncio.create_task(source.executer(arret), name="twitch"),
+        asyncio.create_task(streamlabs.executer(arret), name="streamlabs"),
         asyncio.create_task(source_minuterie.executer(file, arret), name="minuterie"),
         asyncio.create_task(moteur.executer(file, arret), name="moteur"),
     ]
