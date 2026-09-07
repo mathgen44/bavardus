@@ -112,7 +112,7 @@ authentification par OAuth Twitch (D19 à D23).
 | 4 | **Bot vivant en ligne de commande** | ✅ **JALON ATTEINT le 2026-09-07** |
 | 5 | `sources/streamlabs.py` (la minuterie est faite) | ✅ 128 tests |
 | 6 | `web/` : authentification, réglages, journal en direct | ✅ 162 tests |
-| 7 | `Dockerfile` et `compose.yaml` | ✅ 167 tests |
+| 7 | `Dockerfile` et `compose.yaml` | ✅ 167 tests · conteneur validé en réel (B15) |
 
 **Le jalon de vérité est franchi.** Bavardus lit le chat de `mathgen`, décide s'il doit
 répondre, interroge `gemma4:e4b` et publie sous son propre compte. Tout ce qui suit est du
@@ -308,16 +308,32 @@ ménage **avant** le clone, en préservant les deux fichiers de secrets — ils 
 dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
 `python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
 
-**La phase 3 est close.** Bavardus est complet et installable par un tiers.
+**La phase 3 est close.** L'infrastructure est complète : moteur, sources, interface,
+conteneur. **Mais le périmètre v1 ne l'est pas.**
+
+### Périmètre v1 — état réel
+
+| # | Fonction | État |
+|---|---|---|
+| 1 | Chat conversationnel IA | ✅ |
+| 2 | Commandes classiques (`!commande`) | 🟡 **partiel** — le Décideur les reconnaît et les découpe, mais aucune commande n'est configurable : tout est passé au modèle, qui improvise une réponse |
+| 3 | Réactions aux alertes Streamlabs | ✅ |
+| 4 | **Modération automatique** | ❌ **non faite** — la configuration existe (`moderation.active`, `mots_interdits`, `action`) et l'interface l'expose, mais **rien ne l'applique**. C'est le seul écart franc entre ce qui est réglable et ce qui agit |
+| 5 | Prise de parole spontanée | ✅ |
+| 6 | Interface web, persona configurable | ✅ |
+
+Deux chantiers restent donc **dans le périmètre annoncé**, et non en supplément.
 
 **Reste à faire, par ordre d'utilité :**
 
-1. **Éprouver en conditions réelles** — un vrai live, avec la prise de parole spontanée
-   activée. C'est le seul test que rien ne remplace.
-2. `/mod bavardus` si ce n'est pas fait (R14).
-3. Retirer `outils/importer_jetons.py` une fois que l'autorisation par l'interface aura
+1. **La modération automatique** (point 4 du périmètre). Attention : l'interface laisse
+   croire qu'elle fonctionne. Tant qu'elle n'est pas écrite, cocher la case ne protège
+   de rien — c'est le genre d'écart qui trompe un utilisateur au mauvais moment.
+2. **Les commandes personnalisées** (point 2) : `!commande` avec réponses fixes,
+   éditables depuis l'interface, avant de passer la main au modèle.
+3. **Éprouver en conditions réelles** — un vrai live, prise de parole spontanée activée.
+   Le seul test que rien ne remplace.
+4. `/mod bavardus` si ce n'est pas fait (R14).
+5. Retirer `outils/importer_jetons.py` une fois que l'autorisation par l'interface aura
    servi au moins une fois.
-4. Publier une image sur ghcr.io pour que l'installation d'un tiers n'exige plus de build.
-5. Les commandes personnalisées (`!commande` avec réponses fixes) et la modération
-   automatique : le Décideur les reconnaît déjà, mais leur traitement se limite pour
-   l'instant à passer la main au modèle.
+6. Publier une image sur ghcr.io pour qu'une installation tierce n'exige plus de build.
