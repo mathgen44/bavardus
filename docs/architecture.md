@@ -130,6 +130,77 @@ un mot de passe par défaut — donc sans laisser une interface ouverte par nég
 celui du **diffuseur** (identité pour l'interface, et autorisations côté chaîne si elles
 deviennent nécessaires). Tous deux expirent et doivent être rafraîchis — **R16**.
 
+## 6 bis. URL publique et installation par un tiers (D23)
+
+### Le point dur
+
+Le `client_secret` Twitch ne peut pas être distribué dans un dépôt public. **Chaque
+utilisateur crée donc sa propre application** sur la console développeur Twitch et y
+déclare sa propre URL de redirection. C'est incontournable ; ce qui se conçoit, c'est de
+rendre l'étape indolore.
+
+### Une seule variable : `BASE_URL`
+
+Toutes les URL de l'application en découlent :
+
+```
+BASE_URL=https://bavardus.mathgen.fr        # derrière un reverse proxy
+BASE_URL=http://localhost:8475              # installation locale, sans domaine
+```
+
+L'URL de redirection à déclarer sur Twitch est toujours `{BASE_URL}/api/twitch/callback`.
+
+**`BASE_URL` est explicite, jamais déduite des en-têtes HTTP.** Déduire depuis `Host` ou
+`X-Forwarded-Proto` fonctionne jusqu'au jour où un reverse proxy est mal configuré : on
+construit alors une URL de redirection qui ne correspond plus à celle déclarée sur Twitch,
+et l'authentification échoue avec un message que personne ne sait interpréter. Une variable
+lisible dans un fichier vaut mieux qu'une devinette.
+
+**Twitch autorise `http://localhost`** — seule exception à l'obligation de HTTPS. Un
+utilisateur sans nom de domaine ni reverse proxy fait donc tourner Bavardus tel quel. C'est
+le cas le plus fréquent en auto-hébergement, et il doit être le chemin par défaut : la
+valeur livrée dans `config.exemple.yaml` est `http://localhost:8475`.
+
+### Une seule URL de redirection, deux flux
+
+Le bot et le propriétaire s'authentifient tous deux par OAuth, mais **une seule URL est
+déclarée sur Twitch**. Le paramètre `state` porte l'intention (`bot` ou `proprietaire`) en
+plus de sa fonction anti-CSRF. Un utilisateur a ainsi une seule chaîne à copier, et une
+seule occasion de se tromper au lieu de deux.
+
+En production, cette callback est **une route de l'application**, pas un serveur HTTP
+éphémère comme dans `outils/diag_twitch.py` : l'application écoute déjà, il n'y a pas de
+second port à ouvrir. `TWITCH_CALLBACK_PORT` disparaît de la configuration.
+
+### Assistant d'installation
+
+Au premier démarrage, aucun propriétaire n'est enregistré (D22). L'application sert alors
+un assistant, dans cet ordre :
+
+1. **`BASE_URL`** — pré-remplie avec l'adresse par laquelle l'utilisateur consulte la page,
+   modifiable.
+2. **L'URL de redirection exacte**, affichée en clair et sélectionnable, avec le lien vers
+   la console développeur Twitch. C'est le geste décisif : Twitch compare la chaîne
+   caractère par caractère, et les échecs viennent presque toujours d'un `/` final en trop,
+   d'un `http` au lieu de `https`, ou d'un port oublié. L'utilisateur copie au lieu de
+   retaper.
+3. **`client_id` et `client_secret`** de son application.
+4. **Connexion du propriétaire** — le compte qui se connecte devient propriétaire et
+   verrouille l'installation (D22).
+5. **Connexion du bot**, en rappelant d'utiliser une **fenêtre de navigation privée** (B11)
+   et de faire du bot un modérateur de la chaîne (R13/R14).
+
+L'assistant n'est joignable que tant qu'aucun propriétaire n'existe. Une fois
+l'installation verrouillée, ces réglages passent dans l'interface authentifiée.
+
+### Vérification au démarrage (G11)
+
+À chaque démarrage, l'application appelle sa propre `BASE_URL` et journalise le résultat.
+Une `BASE_URL` qui ne joint pas l'application est la panne la plus déroutante possible :
+tout fonctionne jusqu'au moment où quelqu'un tente de se connecter. Mieux vaut une ligne
+rouge au démarrage qu'une authentification qui échoue trois semaines plus tard, après un
+changement d'adresse IP (R12).
+
 ## 7. Stockage
 
 | Donnée | Support | Pourquoi |
@@ -154,6 +225,7 @@ de verrou, pas de redémarrage, pas d'état à moitié appliqué.
 | **D20** | Interface en rendu serveur : FastAPI + Jinja2 + HTMX + SSE. Aucun build front |
 | **D21** | Configuration en YAML rechargeable à chaud ; historique, journal et statistiques en SQLite ; jetons dans un fichier séparé à droits 600 |
 | **D22** | Authentification de l'interface par OAuth Twitch. Le premier compte connecté devient propriétaire et verrouille l'installation |
+| **D23** | **Une seule variable `BASE_URL`**, explicite et jamais déduite des en-têtes HTTP, d'où découlent toutes les URL. Une seule URL de redirection déclarée sur Twitch pour les deux flux, distingués par le paramètre `state`. Défaut livré : `http://localhost:8475`. Un assistant d'installation affiche la chaîne exacte à copier sur la console développeur Twitch |
 
 ## 9. Garde-fous et risques nouveaux
 
@@ -163,6 +235,7 @@ de verrou, pas de redémarrage, pas d'état à moitié appliqué.
 | **G18** | L'Émetteur est le **seul** point de sortie vers Twitch. G4 et G14 y sont appliqués une fois, jamais dupliqués ailleurs |
 | **R16** | Deux jeux de jetons à rafraîchir (bot et diffuseur). Celui du diffuseur expire aussi : sans rafraîchissement, l'interface se ferme au propriétaire sans explication |
 | **R17** | Un seul processus : redémarrer l'interface coupe le bot. Accepté (D19), à documenter pour l'utilisateur |
+| **R18** | Une `BASE_URL` erronée ou périmée ne se voit qu'au moment d'une connexion : tout paraît fonctionner jusque-là. Mitigé par la vérification au démarrage (G11) |
 
 ## 10. Ordre de construction
 
