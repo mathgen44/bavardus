@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY bavardus/ ./bavardus/
 COPY outils/ ./outils/
-COPY config.exemple.yaml LICENSE README.md ./
+COPY config.exemple.yaml moderation.exemple.txt LICENSE README.md ./
 
 # Tout l'état dans un seul volume : config.yaml, .env, jetons.json, la base
 # et la clé de session. Le sauvegarder, c'est sauvegarder l'installation.

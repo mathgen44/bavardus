@@ -23,6 +23,27 @@ from dataclasses import dataclass
 
 ACTIONS = ("supprimer", "avertir", "exclure")
 
+FICHIER_EXEMPLE = "moderation.exemple.txt"
+
+
+def liste_exemple(racine) -> tuple[str, ...]:
+    """La liste de départ livrée avec le projet.
+
+    Volontairement centrée sur le spam et les arnaques de viewers : les
+    catégories générales (insultes identitaires, harcèlement) relèvent
+    d'AutoMod, qui les traite par thème et par niveau, tient compte du
+    contexte et se met à jour tout seul. Une liste de mots ne le remplace
+    pas — elle couvre ce qui est propre à une chaîne.
+    """
+    from pathlib import Path
+
+    chemin = Path(racine) / FICHIER_EXEMPLE
+    if not chemin.exists():
+        return ()
+    lignes = chemin.read_text(encoding="utf-8").splitlines()
+    return tuple(l.strip() for l in lignes
+                 if l.strip() and not l.strip().startswith("#"))
+
 
 @dataclass(frozen=True, slots=True)
 class Sanction:

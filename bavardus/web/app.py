@@ -221,6 +221,19 @@ def creer_application(contexte: Contexte) -> FastAPI:
         if not connecte(requete):
             return RedirectResponse("/connexion", status_code=303)
         donnees = await requete.form()
+
+        if donnees.get("action") == "charger_exemple":
+            # Fusion, jamais remplacement : l'utilisateur a peut-être déjà
+            # ajouté des mots propres à sa chaîne, et les perdre en cliquant
+            # sur un bouton d'aide serait le contraire d'une aide.
+            from ..noyau.moderation import liste_exemple
+            from ..chemins import racine_code
+            existants = set(contexte.config.moderation.mots_interdits)
+            proposes = set(liste_exemple(racine_code()))
+            fusion = "\n".join(sorted(existants | proposes))
+            donnees = dict(donnees)
+            donnees["mots_interdits"] = fusion
+
         try:
             candidate = appliquer_formulaire(contexte.config, donnees)
         except ConfigInvalide as erreur:

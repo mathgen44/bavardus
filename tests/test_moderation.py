@@ -185,3 +185,47 @@ def test_le_trait_dunion_unit_encore():
     positifs sur « parole »."""
     assert mot_interdit("le porte-parole", ["parole"]) == ""
     assert mot_interdit("le porte-parole", ["porte-parole"]) == "porte-parole"
+
+
+# --------------------------------------------------- liste livrée par défaut
+def test_la_liste_exemple_est_lisible():
+    from bavardus.chemins import racine_code
+    from bavardus.noyau.moderation import liste_exemple
+
+    mots = liste_exemple(racine_code())
+    assert len(mots) > 10
+    # Ni commentaires ni lignes vides ne doivent survivre à la lecture.
+    assert not any(m.startswith("#") or not m.strip() for m in mots)
+
+
+def test_la_liste_exemple_attrape_le_spam_de_viewers():
+    """Le fléau le plus courant sur une petite chaîne, et le plus facile à
+    attraper : ces messages sont presque toujours formulés à l'identique."""
+    from bavardus.chemins import racine_code
+    from bavardus.noyau.moderation import liste_exemple
+
+    mots = liste_exemple(racine_code())
+    for message in ("Best viewers on bigfollows . com",
+                    "buy followers cheap", "check my bio for free nitro"):
+        assert mot_interdit(message, mots), message
+
+
+def test_la_liste_exemple_ne_declenche_pas_sur_un_chat_ordinaire():
+    """Un faux positif coûte plus cher qu'un spam passé au travers."""
+    from bavardus.chemins import racine_code
+    from bavardus.noyau.moderation import liste_exemple
+
+    mots = liste_exemple(racine_code())
+    ordinaires = [
+        "salut tout le monde", "ce boss est vraiment difficile",
+        "j'ai suivi la chaîne hier", "tu as combien de followers ?",
+        "il est gratuit ce jeu ?", "regarde ma nouvelle souris",
+        "GG bien joué !", "je te suis depuis longtemps",
+    ]
+    for message in ordinaires:
+        assert mot_interdit(message, mots) == "", message
+
+
+def test_liste_absente_ne_leve_pas(tmp_path):
+    from bavardus.noyau.moderation import liste_exemple
+    assert liste_exemple(tmp_path) == ()

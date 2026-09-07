@@ -142,7 +142,16 @@
   <textarea id="mots_interdits" name="mots_interdits" style="min-height:5rem"
     >{{ config.moderation.mots_interdits | join("\n") }}</textarea>
   <p class="aide" style="margin-top:.4rem">Un par ligne. Une entrée contenant une espace
-    est cherchée comme locution entière.</p>
+    est cherchée comme locution entière.
+    <button class="bouton discret" type="submit" name="action" value="charger_exemple"
+            style="margin-left:.5rem; padding:.3rem .7rem; font-size:.85rem">
+      Ajouter la liste d'exemple</button></p>
+  <p class="aide">La liste livrée vise surtout le <strong>spam de viewers</strong> et les
+    fausses promotions — le fléau le plus courant, et le plus simple à attraper. Elle ne
+    contient volontairement <strong>aucune insulte identitaire</strong> :
+    <a href="https://dashboard.twitch.tv/settings/moderation" target="_blank"
+       rel="noopener">AutoMod de Twitch</a> couvre ces catégories bien mieux, par thème et
+    par niveau, en tenant compte du contexte. Les deux se complètent.</p>
 
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
     <div>

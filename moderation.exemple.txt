@@ -1,0 +1,67 @@
+# Bavardus — liste de départ pour la modération automatique.
+#
+# Un mot ou une locution par ligne. Les lignes vides et celles commençant
+# par # sont ignorées. La détection porte sur des MOTS ENTIERS, casse et
+# accents normalisés.
+#
+# ─────────────────────────────────────────────────────────────────────────
+# CE QUE CETTE LISTE NE CONTIENT PAS, ET POURQUOI
+#
+# Aucune insulte identitaire (raciste, homophobe, sexiste…) n'y figure, et
+# c'est délibéré :
+#
+#   1. AutoMod de Twitch couvre ces catégories bien mieux qu'une liste de
+#      mots. Il travaille par thème et par niveau de sévérité, tient compte
+#      du contexte de la phrase, et se met à jour sans que personne ait à
+#      maintenir un fichier. Il s'active dans le tableau de bord Twitch,
+#      section Modération. C'est l'outil fait pour ça — utilise-le.
+#
+#   2. Une liste de mots entiers est facile à contourner et produit des
+#      faux positifs. Elle ne remplace pas AutoMod, elle le complète.
+#
+#   3. Ce fichier est versionné dans un dépôt public. Y écrire des insultes
+#      identitaires en ferait un document désagréable à lire pour ceux-là
+#      mêmes qu'il prétend protéger.
+#
+# La bonne répartition : AutoMod pour les catégories générales, cette liste
+# pour ce qui est propre à ta chaîne — le spam, et les mots dont tu ne veux
+# pas chez toi même s'ils passent ailleurs.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+# ── Arnaques et spam de viewers ─────────────────────────────────────────
+# Le fléau le plus courant sur une petite chaîne, et le plus facile à
+# attraper : ces messages sont formulés en anglais, presque toujours à
+# l'identique, et n'ont aucun usage légitime dans un chat.
+free followers
+cheap viewers
+buy followers
+buy viewers
+best viewers
+cheap followers
+free primes
+viewers on
+followers on
+promote your stream
+
+# ── Faux cadeaux et hameçonnage ─────────────────────────────────────────
+free nitro
+free gift card
+steam gift
+click my link
+check my bio
+dm me for
+
+# ── Insultes françaises courantes ───────────────────────────────────────
+# Non ambiguës et sans usage anodin. À compléter ou à retirer selon le ton
+# de ta communauté : sur certaines chaînes, ces mots font partie du décor.
+connard
+enfoiré
+salopard
+ta gueule
+ferme ta gueule
+va te faire foutre
+
+# ── Propre à ta chaîne ──────────────────────────────────────────────────
+# Le nom d'un concurrent, une blague usée, le pseudo d'un ancien casseur
+# d'ambiance… C'est ici que cette liste devient utile.
