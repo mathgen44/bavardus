@@ -6,10 +6,14 @@
 **Dernière mise à jour :** 2026-09-07 (02h00) — **phase 1 close**
 
 > ⚠️ **Fichier reconstitué le 2026-09-06** — l'original avait disparu. Conséquence :
-> **la numérotation d'origine des bugs est partiellement perdue.** `test_qualite.py`
-> référence un **B3** qui n'a pas été reconstitué. Les bugs traités depuis sont donc
-> numérotés à partir de **B4**. Même prudence pour les décisions : D14 et suivantes sont
-> supposées libres, sans certitude.
+> **la numérotation d'origine des bugs est partiellement perdue.** Un balayage du code a
+> retrouvé **B1**, **B3** et **B4** (voir §7), mais l'étendue réelle de la série est
+> inconnue. Les bugs traités depuis sont donc numérotés **à partir de B10**, la plage
+> **1–9 étant réservée à l'historique d'origine**. Correction du 2026-09-07 : ils avaient
+> d'abord été notés B4 et B5, ce qui écrasait des références existantes.
+>
+> Même prudence pour les décisions : D14 et suivantes sont supposées libres, sans
+> certitude — le balayage n'a trouvé dans le code que D5, D12, D13 et D15.
 
 ---
 
@@ -45,7 +49,7 @@
 | Étape | Objet | État |
 |---|---|---|
 | 1.3 | Application Twitch enregistrée, compte bot créé | ✅ |
-| 1.3b | Chaîne publique DNS → box → NPM → VM:8475 | ✅ (B4) |
+| 1.3b | Chaîne publique DNS → box → NPM → VM:8475 | ✅ (B10) |
 | 1.4 | Flux OAuth de bout en bout | ✅ compte `bavardus` |
 | 1.5 | Rafraîchissement du jeton (R4) | ✅ 14612 s → 13357 s |
 | 1.6 | Connecteur Streamlabs | ✅ événements reçus |
@@ -133,6 +137,7 @@ responsabilité au modèle.
 | **G12** | Alerte bruyante si le jeton appartient au diffuseur (`user_id == broadcaster_id`) |
 | **G13** | Ne jamais conclure d'un envoi réussi que la lecture fonctionne |
 | **G14** | **Une réponse vide du modèle n'est jamais postée et doit être journalisée avec sa cause** (`finish_reason`, présence d'un champ `reasoning`) |
+| **G16** | Les outils de diagnostic portent le préfixe `diag_`, jamais `test_` : ils exigent de vrais identifiants et une interaction humaine, et `pytest` ne doit pas les collecter. `tests/` reste réservé aux vrais tests unitaires |
 | **G15** | Aucun contenu versionné ne porte le nom civil de l'auteur : `mathgen44` partout, y compris dans la configuration git locale du dépôt |
 
 ## 6. Questions ouvertes
@@ -146,12 +151,33 @@ responsabilité au modèle.
 
 ## 7. Journal des bugs
 
-> **B1 – B3 : issus du suivi d'origine, non reconstitués.** Seul **B3** est connu par une
-> référence dans `test_qualite.py` : *sur le point d'entrée `/v1` d'Ollama, `think` est
-> ignoré ; seul `/api/chat` le prend en compte ; `reasoning_effort:"none"` ne suffit pas
-> pour tous les modèles.* Fondement de D16.
+> **B1 – B9 : plage réservée au suivi d'origine, non reconstitué.** Trois entrées ont été
+> retrouvées par balayage du code le 2026-09-07 :
+>
+> - **B1** — les modèles d'embedding n'ont pas de point d'entrée de conversation.
+> - **B3** — sur le point d'entrée `/v1` d'Ollama, `think` est ignoré ; seul `/api/chat`
+>   le prend en compte, et `reasoning_effort:"none"` ne suffit pas pour tous les modèles.
+>   **Fondement de D16.**
+> - **B4** — l'environnement l'emporte sur le fichier `.env` : une variable exportée lors
+>   d'un essai précédent écrase silencieusement la configuration, d'où l'affichage de
+>   l'origine de chaque valeur.
+>
+> B2 et B5–B9 restent inconnus.
 
-### B5 — Auth faite avec le compte du diffuseur au lieu du compte du bot
+### B12 — Les outils déplacés dans `outils/` ne trouvaient plus le `.env`
+**Ouvert et clos le 2026-09-07 — corrigé préventivement, jamais rencontré en usage**
+
+Les scripts lisaient `.env` et écrivaient `.twitch_tokens.json` dans le **répertoire
+courant**. Après leur déplacement dans `outils/`, les lancer depuis ce dossier aurait
+imposé un second fichier de secrets — exactement ce que G5 cherche à éviter.
+
+**Correction :** `racine_config()` cherche le `.env` dans le répertoire courant (usage
+historique préservé), puis dans le dossier de l'outil, puis à la racine du dépôt. Les
+secrets restent dans un seul fichier, à la racine.
+
+---
+
+### B11 — Auth faite avec le compte du diffuseur au lieu du compte du bot
 **Ouvert le 2026-09-06 · ✅ Clos le 2026-09-07**
 
 `--check` affichait `COMPTE mathgen (64157622)` **et** `CHAÎNE mathgen (64157622)`. Le bot
@@ -164,7 +190,7 @@ l'écran de consentement s'affiche pour le compte déjà connecté. Remède : na
 **Corrections :** G12, D15, 401 modérateur requalifié en comportement attendu, remède
 affiché sur un 403 de lecture.
 
-### B4 — `https://bavardus.mathgen.fr` renvoyait 404
+### B10 — `https://bavardus.mathgen.fr` renvoyait 404
 **Ouvert le 2026-09-06 · ✅ Clos le 2026-09-06**
 
 DNS ✅ `86.236.115.226`, ports 80/443 ✅, certificat TLS ✅ `*.mathgen.fr`, `GET /` ❌ 404.

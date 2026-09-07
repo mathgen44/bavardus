@@ -48,6 +48,22 @@ INTERESSANTS = {
 }
 
 
+# ---------------------------------------------------------------- emplacements
+# B12 : depuis que les outils vivent dans outils/, le répertoire courant n'est
+# plus forcément celui du .env. On cherche, dans l'ordre : le répertoire
+# courant (usage historique), le dossier de l'outil, puis la racine du dépôt.
+# Les secrets restent ainsi dans UN seul fichier, jamais dupliqué.
+def racine_config():
+    ici = os.path.dirname(os.path.abspath(__file__))
+    for dossier in (os.getcwd(), ici, os.path.dirname(ici)):
+        if os.path.exists(os.path.join(dossier, ".env")):
+            return dossier
+    return os.path.dirname(ici)
+
+
+CONFIG_DIR = racine_config()
+CHEMIN_ENV = os.path.join(CONFIG_DIR, ".env")
+
 def log(tag, message):
     print(f"[{datetime.now():%H:%M:%S}] {tag:<10} {message}", flush=True)
 
@@ -61,8 +77,8 @@ def charger_jeton(argument):
     if depuis_env:
         return depuis_env.strip()
 
-    if os.path.exists(".env"):
-        with open(".env", encoding="utf-8") as fichier:
+    if os.path.exists(CHEMIN_ENV):
+        with open(CHEMIN_ENV, encoding="utf-8") as fichier:
             for ligne in fichier:
                 if ligne.strip().startswith("STREAMLABS_SOCKET_TOKEN="):
                     return ligne.split("=", 1)[1].strip().strip("\"'")

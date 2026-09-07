@@ -33,26 +33,31 @@ honore `think: false`.
 modèle ne produit que le texte une fois la décision prise. Un bot dont le silence dépend
 de la bonne volonté d'un modèle finit par parler par-dessus tout le monde.
 
-## Scripts de validation
+## Outils de diagnostic
 
-Chacun se lance seul et diagnostique une brique. Aucun ne dépend de l'application.
+Quatre scripts autonomes, dans `outils/`, sans aucune dépendance à l'application. Ils
+prouvent — ou réparent — une brique isolée. Quand le bot ne répond pas, c'est là qu'on
+cherche pourquoi avant de toucher au code. Détail complet dans
+[`outils/README.md`](outils/README.md).
 
-| Script | Rôle |
+| Outil | Ce qu'il prouve |
 |---|---|
-| `test_twitch.py` | OAuth, rafraîchissement du jeton, EventSub, lecture et envoi de messages |
-| `test_streamlabs.py` | Réception des alertes Streamlabs (Socket.IO) |
-| `test_ollama.py` | Latence réelle des modèles installés |
-| `test_qualite.py` | Comparaison qualitative de plusieurs modèles sur six situations types |
+| `outils/diag_twitch.py` | OAuth, rafraîchissement du jeton, EventSub, lecture et envoi de messages |
+| `outils/diag_streamlabs.py` | Réception des alertes Streamlabs (Socket.IO) |
+| `outils/diag_ollama.py` | Latence réelle des modèles installés |
+| `outils/diag_qualite.py` | Comparaison qualitative de plusieurs modèles |
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-test.txt
+pip install -r outils/requirements.txt
 cp .env.exemple .env      # puis remplir
-python3 test_twitch.py --auth
+python3 outils/diag_twitch.py --auth
 ```
 
-`test_twitch.py --auth`, `--check`, `--refresh` et `--say` n'utilisent que la bibliothèque
-standard. `--listen` et `test_streamlabs.py` ont besoin des dépendances ci-dessus.
+Ils lisent le `.env` à la racine du dépôt : les secrets ne sont jamais dupliqués.
+Le préfixe est `diag_` et non `test_` — ce ne sont pas des tests automatisables, ils
+exigent de vrais identifiants et une interaction humaine, et `pytest` ne doit pas les
+collecter. Le dossier `tests/` reste réservé aux vrais tests unitaires.
 
 ### Pièges connus
 
@@ -65,9 +70,12 @@ standard. `--listen` et `test_streamlabs.py` ont besoin des dépendances ci-dess
   d'autorisation distinctes. La lecture exige que le bot soit modérateur de la chaîne
   (`/mod <compte_du_bot>`) ou que le diffuseur lui ait accordé `channel:bot` ; l'envoi
   fonctionne sans, mais avec des limites anti-spam bien plus sévères.
+- **Un modèle qui ne répond rien n'est pas forcément cassé.** Sur Ollama, il faut
+  `--native --no-think` : le mode réflexion consomme sinon la totalité du plafond de
+  jetons sans produire une ligne.
 - **Les dépendances Streamlabs sont épinglées volontairement.** Streamlabs expose un
-  serveur Socket.IO ancien (protocole Engine.IO v3) ; `python-socketio` 5.x ne peut pas
-  s'y connecter. Ne pas les mettre à jour sans tester.
+  serveur Socket.IO ancien (Engine.IO v3) ; `python-socketio` 5.x ne peut pas s'y
+  connecter. Ne pas les mettre à jour sans relancer le diagnostic.
 
 ## Sécurité
 

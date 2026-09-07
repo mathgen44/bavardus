@@ -11,7 +11,7 @@ Ce script valide la chaîne complète avant qu'on écrive la moindre architectur
 
 Dépendance : websocket-client (déjà dans requirements-test.txt).
 
-Configuration, dans un fichier .env à côté du script :
+Configuration, dans un fichier .env à la racine du dépôt :
 
     TWITCH_CLIENT_ID=...
     TWITCH_CLIENT_SECRET=...
@@ -38,7 +38,23 @@ import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-FICHIER_JETONS = ".twitch_tokens.json"
+# ---------------------------------------------------------------- emplacements
+# B12 : depuis que les outils vivent dans outils/, le répertoire courant n'est
+# plus forcément celui du .env. On cherche, dans l'ordre : le répertoire
+# courant (usage historique), le dossier de l'outil, puis la racine du dépôt.
+# Les secrets restent ainsi dans UN seul fichier, jamais dupliqué.
+def racine_config():
+    ici = os.path.dirname(os.path.abspath(__file__))
+    for dossier in (os.getcwd(), ici, os.path.dirname(ici)):
+        if os.path.exists(os.path.join(dossier, ".env")):
+            return dossier
+    return os.path.dirname(ici)
+
+
+CONFIG_DIR = racine_config()
+CHEMIN_ENV = os.path.join(CONFIG_DIR, ".env")
+
+FICHIER_JETONS = os.path.join(CONFIG_DIR, ".twitch_tokens.json")
 
 AUTORISATION = "https://id.twitch.tv/oauth2/authorize"
 JETON = "https://id.twitch.tv/oauth2/token"
@@ -65,8 +81,8 @@ ORIGINE = {}
 
 def config():
     valeurs = {}
-    if os.path.exists(".env"):
-        with open(".env", encoding="utf-8") as fichier:
+    if os.path.exists(CHEMIN_ENV):
+        with open(CHEMIN_ENV, encoding="utf-8") as fichier:
             for ligne in fichier:
                 ligne = ligne.strip()
                 if ligne and not ligne.startswith("#") and "=" in ligne:
