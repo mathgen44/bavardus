@@ -18,6 +18,7 @@ python3 outils/diag_twitch.py --check
 | `diag_streamlabs.py` | Réception des alertes Streamlabs (Socket.IO) |
 | `diag_ollama.py` | Latence réelle des modèles installés |
 | `diag_qualite.py` | Comparaison qualitative de plusieurs modèles sur six situations types |
+| `importer_jetons.py` | Convertit `.twitch_tokens.json` en `jetons.json` pour le moteur |
 
 ## diag_twitch.py
 
@@ -74,3 +75,19 @@ un modèle cassé.
 
 `diag_qualite.py` ne rend pas de verdict : il pose les mêmes six situations à chaque
 modèle et affiche les réponses côte à côte. C'est un humain qui juge.
+
+## importer_jetons.py
+
+Passerelle de transition, le temps que l'interface web prenne en charge
+l'autorisation.
+
+```bash
+python3 outils/diag_twitch.py --auth          # produit .twitch_tokens.json
+python3 outils/importer_jetons.py             # -> jetons.json, usage « bot »
+python3 outils/importer_jetons.py --usage proprietaire
+```
+
+Le script demande à Twitch **à qui appartient réellement le jeton** avant de
+l'écrire, et affiche le login obtenu. C'est en croyant tenir le jeton du bot
+alors qu'il portait celui du diffuseur qu'on a perdu une soirée (B11) : autant
+que la conversion le dise tout de suite.
