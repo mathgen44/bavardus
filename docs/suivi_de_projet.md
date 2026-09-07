@@ -110,8 +110,8 @@ authentification par OAuth Twitch (D19 à D23).
 | 2 | `noyau/` — Décideur, Générateur, Émetteur | ✅ 88 tests |
 | 3 | `sources/twitch.py` — EventSub et Helix | ✅ 112 tests |
 | 4 | **Bot vivant en ligne de commande** | ✅ **JALON ATTEINT le 2026-09-07** |
-| 5 | `sources/streamlabs.py` (la minuterie est faite) | ⏳ suivante |
-| 6 | `web/` : authentification, réglages, journal en direct | ⏳ |
+| 5 | `sources/streamlabs.py` (la minuterie est faite) | ✅ 128 tests |
+| 6 | `web/` : authentification, réglages, journal en direct | ⏳ **suivante** |
 | 7 | `Dockerfile` et `compose.yaml` | ⏳ |
 
 **Le jalon de vérité est franchi.** Bavardus lit le chat de `mathgen`, décide s'il doit
@@ -156,6 +156,7 @@ Constaté au premier démarrage réel :
 | **D16** | **Le mode réflexion est désactivé explicitement en production**, quel que soit le modèle. Sur Ollama cela impose l'API native `/api/chat` avec `think:false` — le point d'entrée `/v1` l'ignore (B3). **Exception assumée à D13**, à isoler dans le connecteur Ollama |
 | **D17** | **La décision de se taire appartient au code, jamais au modèle.** Le moteur décide s'il faut répondre ; le modèle ne produit que le texte une fois la décision prise |
 | **D18** | **Modèle par défaut : `gemma4:e4b`** (Q15). `qwen3.5:9b` en alternative documentée, avec réserve sur son ton |
+| **D24** | *(nouveau)* **Le client Socket.IO Streamlabs reste synchrone, isolé dans un thread.** `python-socketio` 4.6.1 en mode synchrone est la seule configuration validée contre R1 ; passer à `AsyncClient` imposerait `aiohttp` et une pile de transport différente, donc rejouer la validation sans nécessité. Le thread dépose ses événements dans la file du noyau, qui ne voit rien |
 
 ## 5. Garde-fous
 
@@ -262,7 +263,6 @@ ménage **avant** le clone, en préservant les deux fichiers de secrets — ils 
 dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
 `python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
 
-**Suite :** étape 5, `sources/streamlabs.py`. **Bloquant :** savoir si
-`diag_streamlabs.py` a fonctionné en mode normal (`python-socketio` 4.6.1) ou s'il a fallu
-le plan B `--raw` — cela décide du connecteur à écrire. Reste aussi en marge :
-`/mod bavardus` si ce n'est pas fait (R14).
+**Suite :** étape 6, l'interface web — authentification OAuth (D22/D23), réglages,
+journal des décisions en direct. C'est elle qui rendra `outils/importer_jetons.py` inutile.
+Reste en marge : `/mod bavardus` si ce n'est pas fait (R14).
