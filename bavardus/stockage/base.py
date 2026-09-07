@@ -146,11 +146,29 @@ class Base:
             " VALUES (?, ?, ?, ?, ?)",
             (time.time(), evenement, int(repondu), raison, detail))
 
-    def dernieres_decisions(self, limite: int = 50) -> list[dict]:
-        lignes = self.connexion.execute(
-            "SELECT horodatage, evenement, repondu, raison, detail FROM decisions"
-            " ORDER BY id DESC LIMIT ?", (limite,)).fetchall()
+    def dernieres_decisions(self, limite: int = 50,
+                            apres_id: int = 0) -> list[dict]:
+        """Les plus récentes d'abord, ou celles postérieures à `apres_id`.
+
+        `apres_id` sert au flux en direct de l'interface : on n'envoie que
+        ce qui est nouveau, sans relire ni retransmettre tout l'historique
+        à chaque battement.
+        """
+        if apres_id:
+            lignes = self.connexion.execute(
+                "SELECT id, horodatage, evenement, repondu, raison, detail"
+                " FROM decisions WHERE id > ? ORDER BY id ASC LIMIT ?",
+                (apres_id, limite)).fetchall()
+        else:
+            lignes = self.connexion.execute(
+                "SELECT id, horodatage, evenement, repondu, raison, detail"
+                " FROM decisions ORDER BY id DESC LIMIT ?", (limite,)).fetchall()
         return [dict(l) for l in lignes]
+
+    def dernier_id_decision(self) -> int:
+        ligne = self.connexion.execute(
+            "SELECT MAX(id) AS dernier FROM decisions").fetchone()
+        return int(ligne["dernier"] or 0)
 
     # ----------------------------------------------------------------- modèle
     async def journaliser_appel(self, modele: str, latence_ms: int,

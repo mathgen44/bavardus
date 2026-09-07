@@ -15,13 +15,19 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+import asyncio
+import json
+import time
+
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
+from ..config import ConfigInvalide, ecrire as ecrire_config
 from .. import secrets as module_secrets
 from ..stockage.jetons import Jetons
 from . import auth
+from .formulaire import appliquer_formulaire
 
 journal = logging.getLogger("bavardus.web")
 
@@ -198,6 +204,92 @@ def creer_application(contexte: Contexte) -> FastAPI:
                       bot=contexte.jetons.get("bot"),
                       config=contexte.config,
                       erreur=erreur, info=info)
+
+    # ------------------------------------------------------------- réglages
+    @application.get("/reglages", response_class=HTMLResponse)
+    async def reglages(requete: Request, erreur: str = "", info: str = ""):
+        if not connecte(requete):
+            return RedirectResponse("/connexion", status_code=303)
+        jeton_bot = contexte.jetons.get("bot")
+        return rendre(requete, "reglages.html",
+                      identite=session(requete), config=contexte.config,
+                      nom_bot=jeton_bot.login if jeton_bot else "lebot",
+                      erreur=erreur, info=info)
+
+    @application.post("/reglages")
+    async def enregistrer_reglages(requete: Request):
+        if not connecte(requete):
+            return RedirectResponse("/connexion", status_code=303)
+        donnees = await requete.form()
+        try:
+            candidate = appliquer_formulaire(contexte.config, donnees)
+        except ConfigInvalide as erreur:
+            # La configuration en vigueur n'a pas bougé : un réglage refusé
+            # ne doit pas faire taire un bot qui fonctionnait.
+            return RedirectResponse(f"/reglages?erreur={erreur}", status_code=303)
+
+        gestionnaire = contexte.gestionnaire_config
+        ecrire_config(gestionnaire.chemin, candidate)
+        gestionnaire.recharger()
+        journal.info("réglages enregistrés (version %s)", gestionnaire.version)
+        return RedirectResponse("/reglages?info=Réglages+appliqués", status_code=303)
+
+    # -------------------------------------------------------------- journal
+    def _formater(ligne: dict) -> dict:
+        return {
+            "id": ligne.get("id", 0),
+            "heure": time.strftime("%H:%M:%S", time.localtime(ligne["horodatage"])),
+            "repondu": bool(ligne["repondu"]),
+            "evenement": ligne["evenement"],
+            "raison": ligne["raison"],
+            "detail": ligne["detail"],
+        }
+
+    STATS_VIDES = {"evenements": 0, "reponses_envoyees": 0,
+                   "latence_moyenne_ms": 0, "taux_vides": 0.0}
+
+    @application.get("/journal", response_class=HTMLResponse)
+    async def page_journal(requete: Request):
+        if not connecte(requete):
+            return RedirectResponse("/connexion", status_code=303)
+        if contexte.base is None:
+            return rendre(requete, "journal.html", identite=session(requete),
+                          decisions=[], stats=STATS_VIDES,
+                          info="Le bot n'est pas démarré : rien à journaliser.")
+        return rendre(requete, "journal.html", identite=session(requete),
+                      decisions=[_formater(l)
+                                 for l in contexte.base.dernieres_decisions(60)],
+                      stats=contexte.base.statistiques())
+
+    @application.get("/api/journal/flux")
+    async def flux_journal(requete: Request):
+        if not connecte(requete):
+            return RedirectResponse("/connexion", status_code=303)
+
+        async def evenements():
+            if contexte.base is None:
+                return
+            dernier = contexte.base.dernier_id_decision()
+            while True:
+                if await requete.is_disconnected():
+                    return
+                # Interrogation périodique plutôt que notification : le
+                # volume est faible (quelques décisions par minute) et cela
+                # évite de coupler l'émetteur au serveur web.
+                nouvelles = await asyncio.to_thread(
+                    contexte.base.dernieres_decisions, 50, dernier)
+                for ligne in nouvelles:
+                    dernier = max(dernier, ligne["id"])
+                    yield f"data: {json.dumps(_formater(ligne), ensure_ascii=False)}\n\n"
+                if not nouvelles:
+                    # Commentaire SSE : maintient la connexion ouverte à
+                    # travers les proxys qui coupent les flux inactifs.
+                    yield ": battement\n\n"
+                await asyncio.sleep(2)
+
+        return StreamingResponse(evenements(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache",
+                                          "X-Accel-Buffering": "no"})
 
     @application.get("/deconnexion")
     async def deconnexion():

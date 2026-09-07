@@ -111,8 +111,8 @@ authentification par OAuth Twitch (D19 à D23).
 | 3 | `sources/twitch.py` — EventSub et Helix | ✅ 112 tests |
 | 4 | **Bot vivant en ligne de commande** | ✅ **JALON ATTEINT le 2026-09-07** |
 | 5 | `sources/streamlabs.py` (la minuterie est faite) | ✅ 128 tests |
-| 6 | `web/` : authentification, réglages, journal en direct | ⏳ **suivante** |
-| 7 | `Dockerfile` et `compose.yaml` | ⏳ |
+| 6 | `web/` : authentification, réglages, journal en direct | ✅ 162 tests |
+| 7 | `Dockerfile` et `compose.yaml` | ⏳ **dernière** |
 
 **Le jalon de vérité est franchi.** Bavardus lit le chat de `mathgen`, décide s'il doit
 répondre, interroge `gemma4:e4b` et publie sous son propre compte. Tout ce qui suit est du
@@ -277,6 +277,9 @@ ménage **avant** le clone, en préservant les deux fichiers de secrets — ils 
 dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
 `python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
 
-**Suite :** étape 6, l'interface web — authentification OAuth (D22/D23), réglages,
-journal des décisions en direct. C'est elle qui rendra `outils/importer_jetons.py` inutile.
-Reste en marge : `/mod bavardus` si ce n'est pas fait (R14).
+**Suite :** étape 7, `Dockerfile` et `compose.yaml` — la dernière. Après quoi Bavardus
+est installable par un tiers en une commande.
+
+Reste en marge : `/mod bavardus` si ce n'est pas fait (R14), et retirer
+`outils/importer_jetons.py` une fois que l'autorisation par l'interface aura servi au
+moins une fois en conditions réelles.

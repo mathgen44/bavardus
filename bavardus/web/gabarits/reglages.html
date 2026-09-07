@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block titre %}Réglages — Bavardus{% endblock %}
+{% block entete %}
+<header class="principal">
+  <h1>Bavardus</h1>
+  <nav style="display:flex; gap:1rem; font-size:.9rem">
+    <a href="/tableau-de-bord">Tableau de bord</a>
+    <a href="/journal">Journal</a>
+  </nav>
+  <span class="qui">{{ identite.login }} · <a href="/deconnexion">déconnexion</a></span>
+</header>
+{% endblock %}
+{% block contenu %}
+<form method="post" action="/reglages">
+
+<div class="carte">
+  <h2>Personnalité</h2>
+  <p class="aide">Décris qui est le bot et comment il parle. Les contraintes de format
+    — une phrase, pas de liste, ne jamais se présenter comme une IA, ne jamais inventer
+    un chiffre — sont ajoutées automatiquement : inutile de les répéter ici.</p>
+  <label for="persona">Persona</label>
+  <textarea id="persona" name="persona">{{ config.persona }}</textarea>
+</div>
+
+<div class="carte">
+  <h2>Quand le bot parle</h2>
+  <p class="aide">Ces règles sont appliquées par le code, jamais laissées au modèle.
+    Chaque décision est consignée avec sa raison dans le <a href="/journal">journal</a>.</p>
+
+  <label><input type="checkbox" name="sur_mention"
+    {% if config.prise_de_parole.sur_mention %}checked{% endif %}>
+    Répondre quand on l'interpelle (<code>@{{ nom_bot }}</code>)</label>
+  <label><input type="checkbox" name="sur_commande"
+    {% if config.prise_de_parole.sur_commande %}checked{% endif %}>
+    Répondre aux commandes (<code>!exemple</code>)</label>
+  <label><input type="checkbox" name="sur_alerte"
+    {% if config.prise_de_parole.sur_alerte %}checked{% endif %}>
+    Réagir aux alertes Streamlabs (follow, don, abonnement, raid)</label>
+
+  <label style="margin-top:1.5rem"><input type="checkbox" name="spontanee_active"
+    {% if config.prise_de_parole.spontanee.active %}checked{% endif %}>
+    <strong>Prendre la parole spontanément</strong> après un silence</label>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
+    <div>
+      <label for="minutes_de_silence">Minutes de silence avant relance</label>
+      <input type="text" id="minutes_de_silence" name="minutes_de_silence"
+             value="{{ config.prise_de_parole.spontanee.minutes_de_silence }}">
+    </div>
+    <div>
+      <label for="max_par_heure">Relances maximum par heure</label>
+      <input type="text" id="max_par_heure" name="max_par_heure"
+             value="{{ config.prise_de_parole.spontanee.max_par_heure }}">
+    </div>
+  </div>
+
+  <label for="max_messages_par_minute">Messages maximum par minute, toutes causes
+    confondues</label>
+  <input type="text" id="max_messages_par_minute" name="max_messages_par_minute"
+         value="{{ config.prise_de_parole.max_messages_par_minute }}">
+  <p class="aide" style="margin-top:.4rem">Garde-fou dur : il l'emporte même sur une
+    interpellation directe. Un bot qui déborde nuit plus qu'un bot qui rate une réponse.</p>
+
+  <label for="comptes_ignores">Comptes ignorés</label>
+  <textarea id="comptes_ignores" name="comptes_ignores" style="min-height:4rem"
+    >{{ config.prise_de_parole.comptes_ignores | join("\n") }}</textarea>
+  <p class="aide" style="margin-top:.4rem">Un par ligne. Les autres bots de la chaîne :
+    deux bots qui se répondent poliment saturent un chat en quelques secondes.</p>
+</div>
+
+<div class="carte">
+  <h2>Modèle</h2>
+  <div style="display:grid; grid-template-columns:1fr 2fr; gap:1rem">
+    <div>
+      <label for="fournisseur">Fournisseur</label>
+      <select id="fournisseur" name="fournisseur">
+        <option value="ollama" {% if config.modele.fournisseur == "ollama" %}selected{% endif %}>Ollama (local)</option>
+        <option value="compatible_openai" {% if config.modele.fournisseur == "compatible_openai" %}selected{% endif %}>Compatible OpenAI</option>
+      </select>
+    </div>
+    <div>
+      <label for="url_modele">Adresse</label>
+      <input type="text" id="url_modele" name="url_modele" value="{{ config.modele.url }}">
+    </div>
+  </div>
+  <label for="nom_modele">Modèle</label>
+  <input type="text" id="nom_modele" name="nom_modele" value="{{ config.modele.nom }}">
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
+    <div>
+      <label for="plafond_jetons">Longueur maximale de la réflexion (jetons)</label>
+      <input type="text" id="plafond_jetons" name="plafond_jetons"
+             value="{{ config.modele.plafond_jetons }}">
+    </div>
+    <div>
+      <label for="temperature">Température</label>
+      <input type="text" id="temperature" name="temperature"
+             value="{{ config.modele.temperature }}">
+    </div>
+  </div>
+
+  <label style="margin-top:1.25rem"><input type="checkbox" name="reflexion"
+    {% if config.modele.reflexion %}checked{% endif %}>
+    Autoriser le mode réflexion du modèle</label>
+  <div class="message alerte" style="margin-top:.75rem">
+    À laisser décoché. Les modèles récents l'activent par défaut et consomment alors
+    la totalité du plafond de jetons en réflexion interne, <strong>sans produire un
+    mot</strong> — le bot se tait sans erreur apparente. Si tu l'actives, il faut monter
+    le plafond à 512 jetons au minimum.
+  </div>
+</div>
+
+<div class="carte">
+  <h2>Conversation</h2>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
+    <div>
+      <label for="contexte_messages">Messages de contexte</label>
+      <input type="text" id="contexte_messages" name="contexte_messages"
+             value="{{ config.conversation.contexte_messages }}">
+    </div>
+    <div>
+      <label for="longueur_max">Longueur maximale d'un message</label>
+      <input type="text" id="longueur_max" name="longueur_max"
+             value="{{ config.conversation.longueur_max }}">
+    </div>
+  </div>
+  <p class="aide" style="margin-top:.4rem">Twitch refuse au-delà de 500 caractères.</p>
+</div>
+
+<div class="carte">
+  <h2>Chaîne</h2>
+  <label for="chaine">Chaîne écoutée</label>
+  <input type="text" id="chaine" name="chaine" value="{{ config.twitch.chaine }}">
+  <p class="aide" style="margin-top:.4rem">Changer de chaîne prend effet au prochain
+    démarrage du bot : l'abonnement au chat est établi à la connexion.</p>
+</div>
+
+<p><button class="bouton" type="submit">Enregistrer</button>
+   <a class="bouton discret" href="/tableau-de-bord">Annuler</a></p>
+<p class="aide">Les réglages sont appliqués immédiatement, sans redémarrer le bot —
+   sauf la chaîne écoutée.</p>
+</form>
+{% endblock %}

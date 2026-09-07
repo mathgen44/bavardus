@@ -41,9 +41,13 @@
 </div>
 
 <div class="carte">
-  <h2>Réglages</h2>
-  <p class="aide">Persona, fréquence des interventions, commandes et modération —
-    à venir dans la prochaine étape. En attendant, <code>config.yaml</code> reste
-    modifiable à la main : il est rechargé sans redémarrer le bot.</p>
+  <h2>Réglages et journal</h2>
+  <p class="aide">Persona, fréquence des interventions, modèle et garde-fous se règlent
+    depuis l'interface et s'appliquent sans redémarrer le bot. Le journal montre, pour
+    chaque message reçu, si le bot a parlé et pourquoi.</p>
+  <p style="display:flex; gap:.75rem">
+    <a class="bouton" href="/reglages">Réglages</a>
+    <a class="bouton discret" href="/journal">Journal en direct</a>
+  </p>
 </div>
 {% endblock %}
