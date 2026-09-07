@@ -220,6 +220,12 @@ proxy host.**
   `--listen` et `test_streamlabs.py` exigent le venv.
 - Aucun code de production écrit à ce jour.
 
+**⚠️ Avant de basculer la VM sur le clone :** `~/Bavardus` contient encore l'ancienne
+arborescence à plat (`test_*.py`), plus `.env`, `.twitch_tokens.json` et `.venv`. Faire le
+ménage **avant** le clone, en préservant les deux fichiers de secrets — ils ne sont pas
+dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
+`python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
+
 **Suite :**
 
 1. **Q16 — architecture.** Découpage des services, API entre moteur et interface web,
