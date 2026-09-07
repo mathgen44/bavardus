@@ -17,14 +17,29 @@ import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 VALIDATION = "https://id.twitch.tv/oauth2/validate"
+JETON = "https://id.twitch.tv/oauth2/token"
 
 
 def racine() -> Path:
     return Path(__file__).resolve().parent.parent
+
+
+def lire_env(chemin: Path) -> dict:
+    if not chemin.exists():
+        return {}
+    valeurs = {}
+    for ligne in chemin.read_text(encoding="utf-8").splitlines():
+        ligne = ligne.strip()
+        if ligne and not ligne.startswith("#") and "=" in ligne:
+            cle, valeur = ligne.split("=", 1)
+            valeurs[cle.strip()] = valeur.strip().strip("\"'")
+    return valeurs
 
 
 def identite(acces: str) -> tuple[str, str]:
@@ -39,6 +54,24 @@ def identite(acces: str) -> tuple[str, str]:
     with urllib.request.urlopen(requete, timeout=15) as reponse:
         bloc = json.load(reponse)
     return bloc.get("login", ""), str(bloc.get("user_id", ""))
+
+
+def rafraichir(rafraichissement: str, client_id: str, client_secret: str) -> dict:
+    """Renouvelle le jeton d'accès.
+
+    Un jeton d'accès Twitch vit environ quatre heures : après une nuit, il
+    est expiré par construction. Ce n'est pas une panne, c'est le
+    fonctionnement normal — le refresh_token existe précisément pour ça.
+    """
+    donnees = urllib.parse.urlencode({
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "refresh_token",
+        "refresh_token": rafraichissement,
+    }).encode()
+    requete = urllib.request.Request(JETON, data=donnees, method="POST")
+    with urllib.request.urlopen(requete, timeout=15) as reponse:
+        return json.load(reponse)
 
 
 def main() -> int:
@@ -67,17 +100,42 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    try:
-        login, user_id = identite(acces)
-    except Exception as erreur:                     # noqa: BLE001
-        print(f"Twitch n'a pas validé ce jeton : {erreur}\n"
-              f"Il a probablement expiré — relancer diag_twitch.py --auth.",
-              file=sys.stderr)
-        return 1
-
-    # L'échéance absolue, reconstruite depuis l'instant de l'obtention.
     obtenu = float(ancien.get("obtenu_le", time.time()))
     expire_le = obtenu + float(ancien.get("expires_in", 0))
+
+    try:
+        login, user_id = identite(acces)
+    except urllib.error.HTTPError as erreur:
+        if erreur.code != 401:
+            print(f"Twitch n'a pas validé ce jeton : {erreur}", file=sys.stderr)
+            return 1
+
+        # Cas normal après quelques heures : on renouvelle plutôt que
+        # d'exiger une nouvelle autorisation.
+        env = lire_env(base / ".env")
+        client_id = env.get("TWITCH_CLIENT_ID", "")
+        client_secret = env.get("TWITCH_CLIENT_SECRET", "")
+        if not client_id or not client_secret:
+            print("Jeton d'accès expiré, et TWITCH_CLIENT_ID / "
+                  "TWITCH_CLIENT_SECRET absents du .env : impossible de le "
+                  "renouveler.", file=sys.stderr)
+            return 1
+
+        print("jeton d'accès expiré — renouvellement…")
+        try:
+            neuf = rafraichir(rafraichissement, client_id, client_secret)
+        except Exception as erreur_refresh:          # noqa: BLE001
+            print(f"le renouvellement a échoué : {erreur_refresh}\n"
+                  f"Le jeton de rafraîchissement a sans doute été révoqué — "
+                  f"relancer : python3 outils/diag_twitch.py --auth",
+                  file=sys.stderr)
+            return 1
+
+        acces = neuf["access_token"]
+        rafraichissement = neuf.get("refresh_token") or rafraichissement
+        expire_le = time.time() + float(neuf.get("expires_in", 0))
+        ancien["scope"] = neuf.get("scope", ancien.get("scope", []))
+        login, user_id = identite(acces)
 
     jetons = {}
     if cible.exists():
