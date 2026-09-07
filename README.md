@@ -10,23 +10,41 @@ compatible avec les alertes Streamlabs.
 
 ## Démarrage rapide
 
+### Avec Docker
+
+```bash
+git clone https://github.com/mathgen44/bavardus.git && cd bavardus
+docker compose up -d
+```
+
+Au premier démarrage la configuration est incomplète : le conteneur sert l'interface
+d'installation et attend. Ouvrir <http://localhost:8475>, suivre l'assistant, puis
+`docker compose restart`.
+
+Tout l'état de l'instance — configuration, secrets, jetons, base — tient dans le dossier
+`donnees/`. Le sauvegarder, c'est sauvegarder l'installation entière.
+
+### Sans Docker
+
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp config.exemple.yaml config.yaml     # puis ajuster base_url et modele.url
-python3 -m bavardus --web-seul         # ouvrir l'interface et suivre l'assistant
+python3 -m bavardus                    # sert l'interface tant que rien n'est configuré
 ```
 
 L'assistant d'installation demande les identifiants de ton application Twitch, affiche
 l'URL de redirection exacte à y déclarer, puis enregistre ton compte de diffuseur comme
 propriétaire de l'instance. Le compte du bot s'autorise ensuite depuis le tableau de bord.
 
-Une fois configuré :
+Une fois configuré, `python3 -m bavardus` démarre le bot **et** l'interface dans un seul
+processus. `python3 -m bavardus --verifier` contrôle l'installation sans rien lancer et
+dit quoi corriger.
 
-```bash
-python3 -m bavardus --verifier         # contrôler l'installation
-python3 -m bavardus                    # bot + interface web
-```
+### Derrière un reverse proxy
+
+Renseigner l'adresse publique dans `base_url` (`config.yaml`) : toutes les URL en
+découlent, y compris celle à déclarer sur Twitch. Activer le support des WebSockets côté
+proxy — le journal en direct passe par un flux d'événements.
 
 `--verifier` contrôle tout ce qui peut manquer — chaîne, identifiants, jetons,
 disponibilité du modèle — et affiche l'URL de redirection exacte à déclarer sur Twitch.

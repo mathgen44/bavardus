@@ -1,0 +1,21 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+tests
+docs
+donnees
+_to_delete
+
+# Secrets et état d'instance : jamais dans une image (G5).
+.env
+config.yaml
+jetons.json
+.twitch_tokens.json
+cle_session
+*.db
+*.db-wal
+*.db-shm

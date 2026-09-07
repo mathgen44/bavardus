@@ -1,0 +1,31 @@
+# Bavardus — un service, un volume.
+#
+#   docker compose up -d && docker compose logs -f
+#
+# Au premier démarrage, la configuration est incomplète : le conteneur sert
+# l'interface d'installation et attend. Ouvrir l'adresse déclarée dans
+# base_url, suivre l'assistant, puis `docker compose restart`.
+
+services:
+  bavardus:
+    build: .
+    # image: ghcr.io/mathgen44/bavardus:latest   # quand une image sera publiée
+    container_name: bavardus
+    restart: unless-stopped
+    ports:
+      - "8475:8475"
+    volumes:
+      # Tout l'état de l'instance. À sauvegarder, rien d'autre.
+      - ./donnees:/donnees
+    environment:
+      # Décommenter pour renseigner les secrets par l'environnement plutôt
+      # que par le fichier .env du volume. B4 : l'environnement l'emporte
+      # sur le fichier, et le démarrage le signale.
+      # TWITCH_CLIENT_ID: ""
+      # TWITCH_CLIENT_SECRET: ""
+      # STREAMLABS_SOCKET_TOKEN: ""
+      TZ: Europe/Paris
+    # Le conteneur détient des jetons Twitch : rien ne justifie de lui
+    # laisser des privilèges dont il n'a pas l'usage.
+    security_opt:
+      - no-new-privileges:true

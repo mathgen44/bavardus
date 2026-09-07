@@ -65,7 +65,7 @@ def cle_session(racine: Path) -> str:
     déconnecterait le propriétaire, ce qui rend l'interface pénible sans rien
     apporter à la sécurité.
     """
-    chemin = Path(racine) / "donnees" / "cle_session"
+    chemin = Path(racine) / "cle_session"
     if chemin.exists():
         return chemin.read_text(encoding="utf-8").strip()
 

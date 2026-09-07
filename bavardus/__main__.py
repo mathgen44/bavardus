@@ -17,6 +17,7 @@ import signal
 import sys
 from pathlib import Path
 
+from . import chemins
 from . import secrets as module_secrets
 from .config import ConfigInvalide, GestionnaireConfig
 from .modeles import construire as construire_modele
@@ -66,7 +67,8 @@ def dependances_manquantes() -> list[tuple[str, str]]:
 
 
 def racine() -> Path:
-    return Path(__file__).resolve().parent.parent
+    """Conservé pour compatibilité : l'état vit dans chemins.dossier_etat()."""
+    return chemins.dossier_etat()
 
 
 def configurer_journal(niveau: str) -> None:
@@ -151,13 +153,31 @@ async def servir_interface(contexte, config, arret) -> None:
             await tache
 
 
+async def lancer_interface_seule(base_projet, gestionnaire, jetons, config) -> int:
+    """Sert l'interface sans le bot, pour configurer une instance neuve."""
+    from .web.app import Contexte
+
+    contexte = Contexte(racine=base_projet, gestionnaire_config=gestionnaire,
+                        jetons=jetons)
+    arret = asyncio.Event()
+    boucle = asyncio.get_running_loop()
+    for signal_arret in (signal.SIGINT, signal.SIGTERM):
+        with contextlib.suppress(NotImplementedError):
+            boucle.add_signal_handler(signal_arret, arret.set)
+    await servir_interface(contexte, config, arret)
+    return 0
+
+
 async def demarrer(arguments) -> int:
-    base_projet = racine()
+    base_projet = chemins.dossier_etat()
+    chemin_config, cree = chemins.preparer_config()
     try:
-        gestionnaire = GestionnaireConfig(base_projet / "config.yaml")
+        gestionnaire = GestionnaireConfig(chemin_config)
     except ConfigInvalide as erreur:
         print(f"Configuration inutilisable : {erreur}", file=sys.stderr)
         return 2
+    if cree:
+        print(f"{chemin_config} créé depuis l'exemple.", file=sys.stderr)
 
     config = gestionnaire.courante
     configurer_journal(config.niveau_journal)
@@ -169,37 +189,36 @@ async def demarrer(arguments) -> int:
             # silencieusement le .env. On le dit plutôt que de le subir.
             journal.warning("%s vient de l'environnement, pas du .env", cle)
 
-    jetons = Jetons(base_projet / "jetons.json")
+    jetons = Jetons(chemins.fichier_jetons())
     modele = construire_modele(config.modele, secrets.cle_modele)
 
     if arguments.web_seul:
-        configurer_journal(config.niveau_journal)
-        from .web.app import Contexte
-        contexte = Contexte(racine=base_projet, gestionnaire_config=gestionnaire,
-                            jetons=jetons)
-        arret = asyncio.Event()
-        boucle = asyncio.get_running_loop()
-        for signal_arret in (signal.SIGINT, signal.SIGTERM):
-            with contextlib.suppress(NotImplementedError):
-                boucle.add_signal_handler(signal_arret, arret.set)
         journal.info("mode installation : le bot ne démarre pas. "
                      "Ouvrir %s pour configurer.", config.base_url)
-        await servir_interface(contexte, config, arret)
-        return 0
+        return await lancer_interface_seule(base_projet, gestionnaire, jetons, config)
 
     problemes = await verifier(gestionnaire, secrets, jetons, modele)
-    if problemes:
+    if arguments.verifier:
         for probleme in problemes:
             journal.error("%s", probleme)
-        if arguments.verifier:
+        if problemes:
             return 1
-        journal.error("démarrage impossible : corriger les points ci-dessus")
-        return 1
-    if arguments.verifier:
         journal.info("installation conforme")
         return 0
 
-    base = Base(base_projet / "donnees" / "bavardus.db")
+    if problemes:
+        for probleme in problemes:
+            journal.error("%s", probleme)
+        # Refuser de démarrer laisserait l'utilisateur sans moyen de
+        # corriger : c'est justement l'interface qui sert à configurer.
+        # On bascule donc en mode installation plutôt que de sortir — un
+        # `docker compose up` sur une instance neuve doit mener quelque part.
+        journal.warning("configuration incomplète : démarrage de l'interface "
+                        "seule. Ouvrir %s pour terminer l'installation.",
+                        config.base_url)
+        return await lancer_interface_seule(base_projet, gestionnaire, jetons, config)
+
+    base = Base(chemins.base_donnees())
     base.ouvrir()
 
     client = ClientTwitch(jetons, secrets.twitch_client_id,

@@ -112,7 +112,7 @@ authentification par OAuth Twitch (D19 à D23).
 | 4 | **Bot vivant en ligne de commande** | ✅ **JALON ATTEINT le 2026-09-07** |
 | 5 | `sources/streamlabs.py` (la minuterie est faite) | ✅ 128 tests |
 | 6 | `web/` : authentification, réglages, journal en direct | ✅ 162 tests |
-| 7 | `Dockerfile` et `compose.yaml` | ⏳ **dernière** |
+| 7 | `Dockerfile` et `compose.yaml` | ✅ 167 tests |
 
 **Le jalon de vérité est franchi.** Bavardus lit le chat de `mathgen`, décide s'il doit
 répondre, interroge `gemma4:e4b` et publie sous son propre compte. Tout ce qui suit est du
@@ -156,7 +156,9 @@ Constaté au premier démarrage réel :
 | **D16** | **Le mode réflexion est désactivé explicitement en production**, quel que soit le modèle. Sur Ollama cela impose l'API native `/api/chat` avec `think:false` — le point d'entrée `/v1` l'ignore (B3). **Exception assumée à D13**, à isoler dans le connecteur Ollama |
 | **D17** | **La décision de se taire appartient au code, jamais au modèle.** Le moteur décide s'il faut répondre ; le modèle ne produit que le texte une fois la décision prise |
 | **D18** | **Modèle par défaut : `gemma4:e4b`** (Q15). `qwen3.5:9b` en alternative documentée, avec réserve sur son ton |
-| **D24** | *(nouveau)* **Le client Socket.IO Streamlabs reste synchrone, isolé dans un thread.** `python-socketio` 4.6.1 en mode synchrone est la seule configuration validée contre R1 ; passer à `AsyncClient` imposerait `aiohttp` et une pile de transport différente, donc rejouer la validation sans nécessité. Le thread dépose ses événements dans la file du noyau, qui ne voit rien |
+| **D25** | *(nouveau)* **Tout l'état d'instance tient dans un seul dossier**, désigné par `BAVARDUS_DONNEES` : `config.yaml`, `.env`, `jetons.json`, la base et la clé de session. Le code est séparé et remplaçable (image Docker) ; sauvegarder ce dossier sauvegarde l'installation entière |
+| **D26** | *(nouveau)* **Une configuration incomplète démarre l'interface au lieu de refuser de démarrer.** Refuser laisserait l'utilisateur sans moyen de corriger, alors que c'est précisément l'interface qui sert à configurer : un `docker compose up` sur une instance neuve doit mener quelque part |
+| **D24** | **Le client Socket.IO Streamlabs reste synchrone, isolé dans un thread.** `python-socketio` 4.6.1 en mode synchrone est la seule configuration validée contre R1 ; passer à `AsyncClient` imposerait `aiohttp` et une pile de transport différente, donc rejouer la validation sans nécessité. Le thread dépose ses événements dans la file du noyau, qui ne voit rien |
 
 ## 5. Garde-fous
 
@@ -277,9 +279,16 @@ ménage **avant** le clone, en préservant les deux fichiers de secrets — ils 
 dans le dépôt (G5) et seraient perdus sans précaution. Les commandes deviennent ensuite
 `python3 outils/diag_twitch.py --check`, avec le `.env` à la racine.
 
-**Suite :** étape 7, `Dockerfile` et `compose.yaml` — la dernière. Après quoi Bavardus
-est installable par un tiers en une commande.
+**La phase 3 est close.** Bavardus est complet et installable par un tiers.
 
-Reste en marge : `/mod bavardus` si ce n'est pas fait (R14), et retirer
-`outils/importer_jetons.py` une fois que l'autorisation par l'interface aura servi au
-moins une fois en conditions réelles.
+**Reste à faire, par ordre d'utilité :**
+
+1. **Éprouver en conditions réelles** — un vrai live, avec la prise de parole spontanée
+   activée. C'est le seul test que rien ne remplace.
+2. `/mod bavardus` si ce n'est pas fait (R14).
+3. Retirer `outils/importer_jetons.py` une fois que l'autorisation par l'interface aura
+   servi au moins une fois.
+4. Publier une image sur ghcr.io pour que l'installation d'un tiers n'exige plus de build.
+5. Les commandes personnalisées (`!commande` avec réponses fixes) et la modération
+   automatique : le Décideur les reconnaît déjà, mais leur traitement se limite pour
+   l'instant à passer la main au modèle.
