@@ -28,9 +28,41 @@ from .sources.streamlabs import SourceStreamlabs
 from .sources.twitch import CanalTwitch, ClientTwitch, ErreurTwitch, SourceTwitch
 from .stockage.base import Base
 from .stockage.jetons import Jetons, JetonsIndisponibles
-from .web.app import Contexte, creer_application
 
 journal = logging.getLogger("bavardus")
+
+
+# (module d'import, paquet à installer, ce que sa perte coûte)
+DEPENDANCES = [
+    ("yaml", "PyYAML", "lecture de config.yaml"),
+    ("httpx", "httpx", "appels à Twitch et au modèle"),
+    ("websockets", "websockets", "réception du chat (EventSub)"),
+    ("socketio", "python-socketio", "alertes Streamlabs"),
+    ("fastapi", "fastapi", "interface web"),
+    ("uvicorn", "uvicorn", "serveur de l'interface web"),
+    ("jinja2", "jinja2", "pages de l'interface web"),
+    ("itsdangerous", "itsdangerous", "signature des sessions"),
+    ("multipart", "python-multipart", "formulaires de l'interface web"),
+]
+
+
+def dependances_manquantes() -> list[tuple[str, str]]:
+    """(paquet, usage) pour chaque dépendance absente.
+
+    Contrôlé avant toute autre chose : une trace de quarante lignes pour
+    dire qu'il manque un paquet fait perdre plus de temps que le paquet
+    lui-même. Le cas arrive à chaque `git pull` qui ajoute une dépendance.
+    """
+    import importlib.util
+    manquantes = []
+    for module, paquet, usage in DEPENDANCES:
+        trouve = importlib.util.find_spec(module) is not None
+        if not trouve and module == "multipart":
+            # Renommé en python_multipart dans les versions récentes.
+            trouve = importlib.util.find_spec("python_multipart") is not None
+        if not trouve:
+            manquantes.append((paquet, usage))
+    return manquantes
 
 
 def racine() -> Path:
@@ -97,6 +129,8 @@ async def servir_interface(contexte, config, arret) -> None:
     """
     import uvicorn
 
+    from .web.app import creer_application
+
     hote, port = "0.0.0.0", 8475
     reste = config.base_url.split("://", 1)[-1]
     if ":" in reste.split("/")[0]:
@@ -140,6 +174,7 @@ async def demarrer(arguments) -> int:
 
     if arguments.web_seul:
         configurer_journal(config.niveau_journal)
+        from .web.app import Contexte
         contexte = Contexte(racine=base_projet, gestionnaire_config=gestionnaire,
                             jetons=jetons)
         arret = asyncio.Event()
@@ -207,6 +242,7 @@ async def demarrer(arguments) -> int:
         with contextlib.suppress(NotImplementedError):
             boucle.add_signal_handler(signal_arret, arret.set)
 
+    from .web.app import Contexte
     contexte_web = Contexte(racine=base_projet, gestionnaire_config=gestionnaire,
                             jetons=jetons, base=base)
 
@@ -241,6 +277,15 @@ def main() -> int:
                            help="servir l'interface sans démarrer le bot — pour "
                                 "faire la première installation")
     arguments = analyseur.parse_args()
+    manquantes = dependances_manquantes()
+    if manquantes:
+        print("Dépendances manquantes :", file=sys.stderr)
+        for paquet, usage in manquantes:
+            print(f"  - {paquet:20} ({usage})", file=sys.stderr)
+        print("\nLes installer avec :\n    pip install -r requirements.txt",
+              file=sys.stderr)
+        return 2
+
     try:
         return asyncio.run(demarrer(arguments))
     except KeyboardInterrupt:

@@ -199,3 +199,33 @@ def test_url_de_redirection_construite_sans_surprise(montage):
     _, contexte = montage
     assert contexte.config.url_redirection == \
         "http://localhost:8475/api/twitch/callback"
+
+
+# ------------------------------------------------------- dépendances (B14)
+def test_les_dependances_manquantes_sont_nommees(monkeypatch):
+    """Un `git pull` qui ajoute une dépendance ne doit pas produire une
+    trace de quarante lignes, mais une phrase et une commande."""
+    import importlib.util
+
+    from bavardus.__main__ import dependances_manquantes
+
+    original = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec",
+                        lambda nom, *a, **kw: None if nom in
+                        ("multipart", "python_multipart") else original(nom, *a, **kw))
+
+    manquantes = dependances_manquantes()
+    assert ("python-multipart", "formulaires de l'interface web") in manquantes
+
+
+def test_multipart_accepte_les_deux_noms(monkeypatch):
+    """Le paquet a été renommé python_multipart : les deux doivent passer."""
+    import importlib.util
+
+    from bavardus.__main__ import dependances_manquantes
+
+    original = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec",
+                        lambda nom, *a, **kw: (None if nom == "multipart"
+                                               else original(nom, *a, **kw)))
+    assert not any(p == "python-multipart" for p, _ in dependances_manquantes())

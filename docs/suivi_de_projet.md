@@ -198,6 +198,20 @@ Constaté au premier démarrage réel :
 >
 > B2 et B5–B9 restent inconnus.
 
+### B14 — Une dépendance manquante produisait une trace illisible
+**Ouvert et clos le 2026-09-07**
+
+Après un `git pull` ajoutant `python-multipart`, le démarrage échouait sur une trace de
+quarante lignes se terminant par le nom du paquet. Le cas se reproduira à chaque nouvelle
+dépendance, et sur chaque installation tierce.
+
+**Correction :** `dependances_manquantes()` est appelée avant toute autre chose et liste
+les paquets absents avec ce que leur perte coûte, suivis de la commande à lancer. Les
+imports de l'interface web sont devenus paresseux pour que ce diagnostic passe **avant**
+l'erreur d'import. Le nom `python_multipart` (renommage récent) est accepté aussi.
+
+---
+
 ### B12 — Les outils déplacés dans `outils/` ne trouvaient plus le `.env`
 **Ouvert et clos le 2026-09-07 — corrigé préventivement, jamais rencontré en usage**
 
