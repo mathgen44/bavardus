@@ -16,6 +16,8 @@ class EvenementChat:
     auteur: str
     texte: str
     auteur_id: str = ""
+    # Identifiant Twitch du message : sans lui, impossible de le supprimer.
+    message_id: str = ""
     horodatage: float = field(default_factory=time.time)
 
     genre = "chat"

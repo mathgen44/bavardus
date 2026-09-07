@@ -17,6 +17,8 @@
       {% else %}Jeton valable encore {{ bot.secondes_restantes // 60 }} min.{% endif %}</p>
     <a class="bouton discret" href="/api/twitch/connexion?usage=bot">
       Réautoriser le compte du bot</a>
+    <a class="bouton discret" href="/api/twitch/connexion?usage=bot_moderation">
+      Réautoriser avec la modération</a>
   {% else %}
     <p class="aide">Aucun compte de bot autorisé : Bavardus ne peut ni lire ni écrire
       dans le chat.</p>

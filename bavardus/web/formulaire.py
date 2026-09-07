@@ -84,6 +84,9 @@ def appliquer_formulaire(config: Config, donnees) -> Config:
         active=_bool(donnees, "moderation_active"),
         mots_interdits=_liste(str(donnees.get("mots_interdits", ""))),
         action=str(donnees.get("action_moderation", config.moderation.action)),
+        duree_exclusion_secondes=_entier(
+            donnees, "duree_exclusion_secondes",
+            config.moderation.duree_exclusion_secondes),
     )
 
     candidate = replace(

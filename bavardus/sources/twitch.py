@@ -88,6 +88,27 @@ class ClientTwitch:
             "message": texte,
         })
 
+    # ----------------------------------------------------------- modération
+    async def supprimer_message(self, broadcaster_id: str, moderateur_id: str,
+                                message_id: str) -> None:
+        await self.appeler("/moderation/chat", methode="DELETE", params={
+            "broadcaster_id": broadcaster_id,
+            "moderator_id": moderateur_id,
+            "message_id": message_id,
+        })
+
+    async def exclure(self, broadcaster_id: str, moderateur_id: str,
+                      utilisateur_id: str, duree: int, motif: str) -> None:
+        """Exclusion TEMPORAIRE. Un bot ne bannit jamais définitivement :
+        une erreur de liste de mots ne doit pas coûter un spectateur."""
+        await self.appeler(
+            "/moderation/bans", methode="POST",
+            params={"broadcaster_id": broadcaster_id,
+                    "moderator_id": moderateur_id},
+            corps={"data": {"user_id": utilisateur_id,
+                            "duration": max(1, int(duree)),
+                            "reason": motif[:500]}})
+
 
 class CanalTwitch:
     """Canal de sortie de l'Émetteur (G18)."""
@@ -100,6 +121,28 @@ class CanalTwitch:
 
     async def envoyer(self, texte: str) -> None:
         await self.client.envoyer_message(self.broadcaster_id, self.sender_id, texte)
+
+
+class CanalModerationTwitch:
+    """Le seul endroit où des droits de modération sont exercés."""
+
+    def __init__(self, client: ClientTwitch, broadcaster_id: str,
+                 moderateur_id: str) -> None:
+        self.client = client
+        self.broadcaster_id = broadcaster_id
+        self.moderateur_id = moderateur_id
+
+    async def supprimer(self, message_id: str) -> None:
+        await self.client.supprimer_message(self.broadcaster_id,
+                                            self.moderateur_id, message_id)
+
+    async def exclure(self, utilisateur_id: str, duree: int, motif: str) -> None:
+        await self.client.exclure(self.broadcaster_id, self.moderateur_id,
+                                  utilisateur_id, duree, motif)
+
+    async def annoncer(self, texte: str) -> None:
+        await self.client.envoyer_message(self.broadcaster_id,
+                                          self.moderateur_id, texte)
 
 
 # ------------------------------------------------------------------ EventSub
@@ -120,6 +163,7 @@ def en_evenement_chat(charge: dict) -> EvenementChat | None:
         auteur=auteur,
         texte=texte,
         auteur_id=str(evenement.get("chatter_user_id", "")),
+        message_id=str(evenement.get("message_id", "")),
         horodatage=time.time(),
     )
 

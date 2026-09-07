@@ -52,8 +52,9 @@ prise_de_parole:
 
 moderation:
   active: false
-  mots_interdits: []
+  mots_interdits: []      # mots entiers ; une entrée avec espace = locution
   action: supprimer       # supprimer | avertir | exclure
+  duree_exclusion_secondes: 600   # toujours temporaire, jamais un bannissement
 
 journal:
   niveau: INFO            # DEBUG | INFO | WARNING | ERROR

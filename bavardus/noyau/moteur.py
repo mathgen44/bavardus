@@ -15,6 +15,8 @@ from ..stockage.base import Base, Message
 from .decideur import ContexteDecision, Decision, decider
 from .emetteur import Emetteur, ResultatEmission
 from .evenements import Evenement, EvenementChat, EvenementMinuterie
+from .moderation import examiner
+from .sanctionneur import Sanctionneur
 from .generateur import Generateur
 
 journal = logging.getLogger("bavardus.moteur")
@@ -22,13 +24,17 @@ journal = logging.getLogger("bavardus.moteur")
 
 class Moteur:
     def __init__(self, gestionnaire_config, base: Base, generateur: Generateur,
-                 emetteur: Emetteur, nom_bot: str, id_bot: str = "") -> None:
+                 emetteur: Emetteur, nom_bot: str, id_bot: str = "",
+                 sanctionneur: Sanctionneur | None = None,
+                 id_diffuseur: str = "") -> None:
         self.config = gestionnaire_config
         self.base = base
         self.generateur = generateur
         self.emetteur = emetteur
         self.nom_bot = nom_bot
         self.id_bot = id_bot
+        self.sanctionneur = sanctionneur
+        self.id_diffuseur = id_diffuseur
 
     def _contexte(self, config) -> ContexteDecision:
         return ContexteDecision(
@@ -45,6 +51,22 @@ class Moteur:
         # donc ce traitement va au bout avec la version qu'il a lue, même si
         # l'interface la change entre-temps (D21).
         config = self.config.courante
+
+        # La modération passe AVANT tout le reste : un message sanctionné ne
+        # doit ni entrer dans le contexte du modèle — qui le relirait et
+        # pourrait s'en inspirer — ni déclencher une réponse.
+        if isinstance(evenement, EvenementChat) and self.sanctionneur is not None:
+            sanction = examiner(evenement, config,
+                                id_diffuseur=self.id_diffuseur,
+                                id_bot=self.id_bot)
+            if sanction is not None:
+                resultat = await self.sanctionneur.appliquer(
+                    sanction, evenement, config)
+                await self.base.journaliser_decision(
+                    "moderation", False,
+                    f"{sanction.action} — {sanction.motif}",
+                    f"{evenement.auteur} · {resultat.detail}")
+                return ResultatEmission(False, raison=sanction.motif)
 
         # Tout message humain entre dans l'historique, même sans réponse :
         # c'est le contexte des tours suivants et le calcul du silence.

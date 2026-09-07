@@ -142,6 +142,7 @@ Constaté au premier démarrage réel :
 | **R14** | Hors modération, limites anti-spam sévères : messages jetés en silence | 🟡 `bavardus` est-il `/mod` ? |
 | **R17** | Un seul processus : redémarrer l'interface coupe le bot | 🟡 accepté (D19), à documenter |
 | **R16** | Deux jeux de jetons à rafraîchir (bot et diffuseur). Celui du diffuseur expire aussi : sans rafraîchissement, l'interface se ferme au propriétaire sans explication | 🟡 à traiter dès `web/auth.py` |
+| **R19** | *(nouveau)* La détection de modération porte sur des mots entiers et ne déjoue aucun contournement (`c0n`, caractères ressemblants). Choix assumé : un faux positif coûte plus cher qu'un mot passé au travers. AutoMod de Twitch reste l'outil de référence pour une modération large | 🟡 documenté dans l'interface |
 | **R15** | Le mode réflexion, actif par défaut, consomme tout le plafond D5 et produit une réponse vide — panne totale et silencieuse | 🟡 mitigé par D16 + G14 |
 
 ## 4. Décisions
@@ -157,7 +158,9 @@ Constaté au premier démarrage réel :
 | **D17** | **La décision de se taire appartient au code, jamais au modèle.** Le moteur décide s'il faut répondre ; le modèle ne produit que le texte une fois la décision prise |
 | **D18** | **Modèle par défaut : `gemma4:e4b`** (Q15). `qwen3.5:9b` en alternative documentée, avec réserve sur son ton |
 | **D25** | *(nouveau)* **Tout l'état d'instance tient dans un seul dossier**, désigné par `BAVARDUS_DONNEES` : `config.yaml`, `.env`, `jetons.json`, la base et la clé de session. Le code est séparé et remplaçable (image Docker) ; sauvegarder ce dossier sauvegarde l'installation entière |
-| **D26** | *(nouveau)* **Une configuration incomplète démarre l'interface au lieu de refuser de démarrer.** Refuser laisserait l'utilisateur sans moyen de corriger, alors que c'est précisément l'interface qui sert à configurer : un `docker compose up` sur une instance neuve doit mener quelque part |
+| **D27** | *(nouveau)* **La modération précède tout le reste et exempte le diffuseur.** Un message sanctionné n'entre pas dans le contexte du modèle — qui le relirait et pourrait s'en inspirer — et ne déclenche aucune réponse. Le diffuseur, le bot et les comptes ignorés ne sont jamais modérés : un bot qui exclut le streamer de son propre chat est une catastrophe que personne ne pardonne |
+| **D28** | *(nouveau)* **L'exclusion est toujours temporaire**, jamais un bannissement définitif : une erreur dans la liste de mots ne doit pas coûter un spectateur à la chaîne. Les scopes de modération sont demandés séparément (`usage=bot_moderation`) — une instance qui ne modère pas ne doit pas réclamer le droit d'exclure |
+| **D26** | **Une configuration incomplète démarre l'interface au lieu de refuser de démarrer.** Refuser laisserait l'utilisateur sans moyen de corriger, alors que c'est précisément l'interface qui sert à configurer : un `docker compose up` sur une instance neuve doit mener quelque part |
 | **D24** | **Le client Socket.IO Streamlabs reste synchrone, isolé dans un thread.** `python-socketio` 4.6.1 en mode synchrone est la seule configuration validée contre R1 ; passer à `AsyncClient` imposerait `aiohttp` et une pile de transport différente, donc rejouer la validation sans nécessité. Le thread dépose ses événements dans la file du noyau, qui ne voit rien |
 
 ## 5. Garde-fous
@@ -318,7 +321,7 @@ conteneur. **Mais le périmètre v1 ne l'est pas.**
 | 1 | Chat conversationnel IA | ✅ |
 | 2 | Commandes classiques (`!commande`) | 🟡 **partiel** — le Décideur les reconnaît et les découpe, mais aucune commande n'est configurable : tout est passé au modèle, qui improvise une réponse |
 | 3 | Réactions aux alertes Streamlabs | ✅ |
-| 4 | **Modération automatique** | ❌ **non faite** — la configuration existe (`moderation.active`, `mots_interdits`, `action`) et l'interface l'expose, mais **rien ne l'applique**. C'est le seul écart franc entre ce qui est réglable et ce qui agit |
+| 4 | **Modération automatique** | ✅ **faite le 2026-09-07** — détection sur mots entiers, trois sanctions, exemptions ; 196 tests |
 | 5 | Prise de parole spontanée | ✅ |
 | 6 | Interface web, persona configurable | ✅ |
 
@@ -326,12 +329,9 @@ Deux chantiers restent donc **dans le périmètre annoncé**, et non en supplém
 
 **Reste à faire, par ordre d'utilité :**
 
-1. **La modération automatique** (point 4 du périmètre). Attention : l'interface laisse
-   croire qu'elle fonctionne. Tant qu'elle n'est pas écrite, cocher la case ne protège
-   de rien — c'est le genre d'écart qui trompe un utilisateur au mauvais moment.
-2. **Les commandes personnalisées** (point 2) : `!commande` avec réponses fixes,
-   éditables depuis l'interface, avant de passer la main au modèle.
-3. **Éprouver en conditions réelles** — un vrai live, prise de parole spontanée activée.
+1. **Les commandes personnalisées** (point 2 du périmètre) : `!commande` avec réponses
+   fixes, éditables depuis l'interface, avant de passer la main au modèle.
+2. **Éprouver en conditions réelles** — un vrai live, prise de parole spontanée activée.
    Le seul test que rien ne remplace.
 4. `/mod bavardus` si ce n'est pas fait (R14).
 5. Retirer `outils/importer_jetons.py` une fois que l'autorisation par l'interface aura

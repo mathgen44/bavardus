@@ -38,8 +38,17 @@ VALIDATION = "https://id.twitch.tv/oauth2/validate"
 # on ne veut que son identité, et /validate la donne sans autorisation
 # particulière. Demander plus serait réclamer des droits dont on n'a pas
 # l'usage — et un écran de consentement inutilement inquiétant.
+SCOPES_CHAT = ["user:read:chat", "user:write:chat", "user:bot"]
+
+# Demandés en plus pour la modération automatique. Séparés volontairement :
+# une instance qui ne modère pas ne doit pas réclamer le droit d'exclure des
+# spectateurs. L'interface les ajoute quand la modération est activée.
+SCOPES_MODERATION = ["moderator:manage:chat_messages",
+                     "moderator:manage:banned_users"]
+
 SCOPES = {
-    "bot": ["user:read:chat", "user:write:chat", "user:bot"],
+    "bot": SCOPES_CHAT,
+    "bot_moderation": SCOPES_CHAT + SCOPES_MODERATION,
     "proprietaire": [],
 }
 
@@ -121,7 +130,7 @@ def url_autorisation(config, client_id: str, usage: str, etat: str) -> str:
         "scope": " ".join(SCOPES[usage]),
         "state": etat,
     }
-    if usage == "bot":
+    if usage.startswith("bot"):
         # G12 : Twitch conserve la session du navigateur. Sans force_verify,
         # l'écran de consentement s'affiche pour le compte déjà connecté et
         # l'on repart avec le jeton du diffuseur sans que rien ne le signale.

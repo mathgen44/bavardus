@@ -26,7 +26,9 @@ from .noyau.generateur import Generateur
 from .noyau.moteur import Moteur
 from .sources import minuterie as source_minuterie
 from .sources.streamlabs import SourceStreamlabs
-from .sources.twitch import CanalTwitch, ClientTwitch, ErreurTwitch, SourceTwitch
+from .noyau.sanctionneur import Sanctionneur
+from .sources.twitch import (CanalModerationTwitch, CanalTwitch, ClientTwitch,
+                             ErreurTwitch, SourceTwitch)
 from .stockage.base import Base
 from .stockage.jetons import Jetons, JetonsIndisponibles
 
@@ -115,6 +117,20 @@ async def verifier(gestionnaire, secrets, jetons, modele) -> list[str]:
         journal.warning(
             "STREAMLABS_SOCKET_TOKEN absent du .env : aucune réaction aux "
             "follows, dons, abonnements et raids (D15). Le chat fonctionne.")
+
+    # La modération exige des scopes que le compte du bot n'a pas forcément
+    # accordés. Activée sans eux, elle échouerait silencieusement à chaque
+    # message : mieux vaut le dire au démarrage.
+    jeton_bot = jetons.get("bot")
+    if config.moderation.active and jeton_bot is not None:
+        from .web.auth import SCOPES_MODERATION
+        absents = [s for s in SCOPES_MODERATION if s not in jeton_bot.scopes]
+        if absents:
+            problemes.append(
+                f"la modération est activée mais le compte du bot n'a pas les "
+                f"autorisations nécessaires ({', '.join(absents)}). "
+                f"Réautoriser le bot depuis l'interface, en cochant la "
+                f"modération, et vérifier qu'il est modérateur de la chaîne.")
 
     # D23/R18 : une base_url fausse ne se voit qu'au moment d'une connexion.
     journal.info("URL de redirection à déclarer sur Twitch : %s",
@@ -250,8 +266,11 @@ async def demarrer(arguments) -> int:
                  nom_bot, id_bot, diffuseur["login"], diffuseur["id"])
 
     canal = CanalTwitch(client, diffuseur["id"], id_bot)
+    sanctionneur = Sanctionneur(
+        CanalModerationTwitch(client, diffuseur["id"], str(id_bot)))
     moteur = Moteur(gestionnaire, base, Generateur(modele),
-                    Emetteur(canal, base, nom_bot), nom_bot, str(id_bot))
+                    Emetteur(canal, base, nom_bot), nom_bot, str(id_bot),
+                    sanctionneur=sanctionneur, id_diffuseur=str(diffuseur["id"]))
 
     file: asyncio.Queue = asyncio.Queue()
     arret = asyncio.Event()

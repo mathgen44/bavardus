@@ -127,6 +127,51 @@
 </div>
 
 <div class="carte">
+  <h2>Modération automatique</h2>
+  <p class="aide">Une liste de mots que tu ne veux pas voir sur ta chaîne. La détection
+    porte sur des <strong>mots entiers</strong> et n'essaie pas de déjouer les
+    contournements : un bot qui sanctionne un spectateur innocent fait plus de dégâts
+    qu'un mot passé au travers. Pour une modération large, AutoMod de Twitch reste
+    l'outil de référence.</p>
+
+  <label><input type="checkbox" name="moderation_active"
+    {% if config.moderation.active %}checked{% endif %}>
+    Activer la modération automatique</label>
+
+  <label for="mots_interdits">Mots et locutions interdits</label>
+  <textarea id="mots_interdits" name="mots_interdits" style="min-height:5rem"
+    >{{ config.moderation.mots_interdits | join("\n") }}</textarea>
+  <p class="aide" style="margin-top:.4rem">Un par ligne. Une entrée contenant une espace
+    est cherchée comme locution entière.</p>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
+    <div>
+      <label for="action_moderation">Sanction</label>
+      <select id="action_moderation" name="action_moderation">
+        <option value="supprimer" {% if config.moderation.action == "supprimer" %}selected{% endif %}>Supprimer le message</option>
+        <option value="avertir" {% if config.moderation.action == "avertir" %}selected{% endif %}>Supprimer et avertir publiquement</option>
+        <option value="exclure" {% if config.moderation.action == "exclure" %}selected{% endif %}>Supprimer et exclure temporairement</option>
+      </select>
+    </div>
+    <div>
+      <label for="duree_exclusion_secondes">Durée d'exclusion (secondes)</label>
+      <input type="text" id="duree_exclusion_secondes" name="duree_exclusion_secondes"
+             value="{{ config.moderation.duree_exclusion_secondes }}">
+    </div>
+  </div>
+  <p class="aide" style="margin-top:.4rem">L'exclusion est toujours temporaire : une
+    erreur dans la liste ne doit pas coûter un spectateur à la chaîne. Le diffuseur, le
+    bot et les comptes ignorés ne sont jamais modérés.</p>
+
+  <div class="message alerte" style="margin-top:1rem">
+    La modération exige que le compte du bot soit <strong>modérateur de la chaîne</strong>
+    (<code>/mod {{ nom_bot }}</code>) et qu'il ait accordé les autorisations
+    correspondantes. Après activation, réautoriser le bot depuis le
+    <a href="/tableau-de-bord">tableau de bord</a>.
+  </div>
+</div>
+
+<div class="carte">
   <h2>Chaîne</h2>
   <label for="chaine">Chaîne écoutée</label>
   <input type="text" id="chaine" name="chaine" value="{{ config.twitch.chaine }}">

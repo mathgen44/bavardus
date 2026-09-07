@@ -77,6 +77,9 @@ class ConfigModeration:
     active: bool = False
     mots_interdits: tuple[str, ...] = ()
     action: str = "supprimer"
+    # Exclusion TEMPORAIRE, jamais définitive : une erreur dans la liste de
+    # mots ne doit pas coûter un spectateur à la chaîne.
+    duree_exclusion_secondes: int = 600
 
     ACTIONS = ("supprimer", "avertir", "exclure")
 
@@ -159,6 +162,12 @@ def valider(config: Config) -> None:
     _exiger(config.moderation.action in ConfigModeration.ACTIONS,
             f"moderation.action doit valoir l'un de "
             f"{', '.join(ConfigModeration.ACTIONS)}")
+    _exiger(1 <= config.moderation.duree_exclusion_secondes <= 1209600,
+            "moderation.duree_exclusion_secondes doit être compris entre 1 s "
+            "et 14 jours (limite de Twitch pour une exclusion temporaire)")
+    _exiger(not (config.moderation.active and not config.moderation.mots_interdits),
+            "la modération est activée sans aucun mot interdit : elle ne "
+            "ferait rien. Ajouter des mots, ou la désactiver.")
 
     _exiger(config.niveau_journal in ("DEBUG", "INFO", "WARNING", "ERROR"),
             f"journal.niveau invalide : {config.niveau_journal!r}")
@@ -223,6 +232,8 @@ def depuis_dict(donnees: dict[str, Any]) -> Config:
             active=bool(mo.get("active", False)),
             mots_interdits=tuple(mo.get("mots_interdits") or ()),
             action=str(mo.get("action", "supprimer")),
+            duree_exclusion_secondes=int(
+                mo.get("duree_exclusion_secondes", 600)),
         ),
         niveau_journal=str(_section(donnees, "journal").get("niveau", "INFO")).upper(),
     )
@@ -326,6 +337,7 @@ def en_dict(config: Config) -> dict[str, Any]:
             "active": config.moderation.active,
             "mots_interdits": list(config.moderation.mots_interdits),
             "action": config.moderation.action,
+            "duree_exclusion_secondes": config.moderation.duree_exclusion_secondes,
         },
         "journal": {"niveau": config.niveau_journal},
     }
