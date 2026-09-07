@@ -3,10 +3,26 @@
 Un bot de chat Twitch autonome, propulsé par un modèle de langage local ou distant,
 compatible avec les alertes Streamlabs.
 
-> **État : phase de validation technique terminée, code de production à venir.**
-> Ce dépôt ne contient pour l'instant que les scripts qui ont servi à prouver chaque
-> brique avant d'écrire l'application. Ils restent utiles : ce sont eux qui diagnostiquent
-> une installation qui ne démarre pas.
+> **État : le moteur fonctionne en ligne de commande. Interface web à venir.**
+> Bavardus lit le chat, décide s'il doit répondre et publie. Les réglages passent par
+> `config.yaml`, rechargé à chaud. Les scripts de `outils/` restent le premier recours
+> quand une installation ne démarre pas.
+
+## Démarrage rapide
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp config.exemple.yaml config.yaml     # puis renseigner twitch.chaine et modele.url
+cp .env.exemple .env                   # puis renseigner les identifiants Twitch
+python3 outils/diag_twitch.py --auth   # autoriser le compte du bot
+python3 -m bavardus --verifier         # contrôler l'installation
+python3 -m bavardus                    # en ligne
+```
+
+`--verifier` contrôle tout ce qui peut manquer — chaîne, identifiants, jetons,
+disponibilité du modèle — et affiche l'URL de redirection exacte à déclarer sur Twitch.
+Chaque message dit quoi corriger, pas seulement ce qui ne va pas.
 
 ## Ce que Bavardus fera
 
