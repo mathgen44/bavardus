@@ -120,6 +120,11 @@ def examiner(evenement, config, *, id_diffuseur: str = "",
         return None
     if id_bot and auteur_id == str(id_bot):
         return None
+    # Les modérateurs et le diffuseur non plus : ce sont eux qui décident du
+    # ton de la chaîne, pas le bot. Le badge fait foi, même si l'identifiant
+    # du diffuseur n'a pas été transmis.
+    if getattr(evenement, "est_moderateur", False):
+        return None
     if auteur in config.prise_de_parole.comptes_ignores:
         return None
 

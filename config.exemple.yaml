@@ -50,6 +50,22 @@ prise_de_parole:
     - streamelements
     - moobot
 
+# Commandes à réponse fixe. Une réponse écrite d'avance vaut mieux qu'une
+# réponse improvisée dès qu'il s'agit de donner un lien : interrogé sur un
+# Discord, un modèle inventerait une adresse plausible et fausse.
+# Marques disponibles dans la réponse : {auteur}, {chaine}, {argument}.
+commandes: []
+#  - nom: discord
+#    reponse: "Le Discord de la chaîne : https://discord.gg/xxxx"
+#    alias: [dc, serveur]
+#    pour: tous                 # tous | abonnes | moderateurs
+#    cooldown_secondes: 30
+
+# Décoché, une commande non listée est ignorée. Recommandé : les chats sont
+# pleins de commandes destinées à d'autres bots (!uptime, !lurk), et y
+# répondre ferait doublon.
+commandes_inconnues_au_modele: false
+
 moderation:
   active: false
   mots_interdits: []      # mots entiers ; une entrée avec espace = locution

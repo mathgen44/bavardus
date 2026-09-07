@@ -127,6 +127,30 @@
 </div>
 
 <div class="carte">
+  <h2>Commandes</h2>
+  <p class="aide">Une par ligne, au format
+    <code>!nom | réponse | options</code>. Les options, séparées par des virgules :
+    <code>alias=dc/serveur</code>, <code>pour=moderateurs</code> ou
+    <code>pour=abonnes</code>, <code>cooldown=30</code>.
+    Dans la réponse, <code>{auteur}</code>, <code>{chaine}</code> et
+    <code>{argument}</code> sont remplacés.</p>
+  <label for="commandes">Commandes</label>
+  <textarea id="commandes" name="commandes" style="min-height:7rem"
+    spellcheck="false">{{ commandes_texte }}</textarea>
+  <p class="aide" style="margin-top:.4rem">Une réponse écrite d'avance vaut mieux qu'une
+    réponse improvisée dès qu'il s'agit de donner un lien : interrogé sur ton Discord, un
+    modèle inventerait une adresse plausible et fausse.</p>
+
+  <label style="margin-top:1.25rem">
+    <input type="checkbox" name="commandes_inconnues_au_modele"
+      {% if config.commandes_inconnues_au_modele %}checked{% endif %}>
+    Laisser le modèle répondre aux commandes inconnues</label>
+  <p class="aide" style="margin-top:.4rem">Décoché, une commande non listée est ignorée.
+    C'est le comportement recommandé : les chats sont pleins de commandes destinées à
+    d'autres bots (<code>!uptime</code>, <code>!lurk</code>), et y répondre ferait doublon.</p>
+</div>
+
+<div class="carte">
   <h2>Modération automatique</h2>
   <p class="aide">Une liste de mots que tu ne veux pas voir sur ta chaîne. La détection
     porte sur des <strong>mots entiers</strong> et n'essaie pas de déjouer les

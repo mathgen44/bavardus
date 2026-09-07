@@ -164,6 +164,8 @@ def en_evenement_chat(charge: dict) -> EvenementChat | None:
         texte=texte,
         auteur_id=str(evenement.get("chatter_user_id", "")),
         message_id=str(evenement.get("message_id", "")),
+        badges=tuple(b.get("set_id", "") for b in (evenement.get("badges") or [])
+                     if isinstance(b, dict)),
         horodatage=time.time(),
     )
 

@@ -11,10 +11,12 @@ import asyncio
 import logging
 import time
 
+from ..modeles.base import Reponse
 from ..stockage.base import Base, Message
 from .decideur import ContexteDecision, Decision, decider
 from .emetteur import Emetteur, ResultatEmission
 from .evenements import Evenement, EvenementChat, EvenementMinuterie
+from .commandes import resoudre
 from .moderation import examiner
 from .sanctionneur import Sanctionneur
 from .generateur import Generateur
@@ -35,6 +37,10 @@ class Moteur:
         self.id_bot = id_bot
         self.sanctionneur = sanctionneur
         self.id_diffuseur = id_diffuseur
+        # Dernier déclenchement de chaque commande, pour les délais
+        # d'attente. En mémoire : un redémarrage remet tout à zéro, ce qui
+        # est sans conséquence et évite une table de plus.
+        self._derniers_appels: dict[str, float] = {}
 
     def _contexte(self, config) -> ContexteDecision:
         return ContexteDecision(
@@ -84,6 +90,27 @@ class Moteur:
                 await self.base.journaliser_decision(
                     decision.genre, False, decision.raison, decision.detail)
             return ResultatEmission(False, raison=decision.raison)
+
+        # Commande à réponse fixe : on ne dérange pas le modèle pour publier
+        # un lien Discord, et surtout on ne le laisse pas l'inventer (R11).
+        if decision.commande:
+            resolution = resoudre(
+                decision, evenement, config,
+                dernier_appel=self._derniers_appels.get(decision.commande),
+                maintenant=time.time())
+
+            if not resolution.agit:
+                await self.base.journaliser_decision(
+                    decision.genre, False, resolution.refus, decision.detail)
+                return ResultatEmission(False, raison=resolution.refus)
+
+            if resolution.texte:
+                await self.base.journaliser_decision(
+                    decision.genre, True, decision.raison, "réponse fixe")
+                self._derniers_appels[decision.commande] = time.time()
+                resultat = await self.emetteur.emettre(
+                    Reponse(texte=resolution.texte), config)
+                return resultat
 
         await self.base.journaliser_decision(
             decision.genre, True, decision.raison, decision.detail)

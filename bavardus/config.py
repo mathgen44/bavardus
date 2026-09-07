@@ -48,6 +48,27 @@ class ConfigModele:
 
 
 @dataclass(frozen=True, slots=True)
+class ConfigCommande:
+    """Une commande à réponse fixe.
+
+    Une réponse écrite d'avance vaut mieux qu'une réponse improvisée quand
+    il s'agit de donner un lien Discord : le modèle inventerait l'URL.
+    """
+    nom: str
+    reponse: str
+    alias: tuple[str, ...] = ()
+    pour: str = "tous"                 # tous | abonnes | moderateurs
+    cooldown_secondes: int = 15
+
+    POUR = ("tous", "abonnes", "moderateurs")
+
+    def repond_a(self, appel: str) -> bool:
+        appel = appel.lower()
+        return appel == self.nom.lower() or appel in tuple(
+            a.lower() for a in self.alias)
+
+
+@dataclass(frozen=True, slots=True)
 class ConfigConversation:
     contexte_messages: int = 12
     longueur_max: int = 500           # G4
@@ -93,7 +114,18 @@ class Config:
     conversation: ConfigConversation = field(default_factory=ConfigConversation)
     prise_de_parole: ConfigPriseDeParole = field(default_factory=ConfigPriseDeParole)
     moderation: ConfigModeration = field(default_factory=ConfigModeration)
+    commandes: tuple[ConfigCommande, ...] = ()
+    # Une commande inconnue est ignorée par défaut. Les chats sont pleins de
+    # commandes destinées à d'autres bots (!uptime, !lurk, !drop) : y
+    # répondre ferait doublon et polluerait la conversation.
+    commandes_inconnues_au_modele: bool = False
     niveau_journal: str = "INFO"
+
+    def commande(self, appel: str) -> ConfigCommande | None:
+        for commande in self.commandes:
+            if commande.repond_a(appel):
+                return commande
+        return None
 
     @property
     def url_redirection(self) -> str:
@@ -169,6 +201,24 @@ def valider(config: Config) -> None:
             "la modération est activée sans aucun mot interdit : elle ne "
             "ferait rien. Ajouter des mots, ou la désactiver.")
 
+    noms_vus: set[str] = set()
+    for commande in config.commandes:
+        _exiger(bool(commande.nom.strip()), "une commande est sans nom")
+        _exiger(bool(commande.reponse.strip()),
+                f"la commande « {commande.nom} » est sans réponse : elle ne "
+                f"produirait rien tout en paraissant configurée")
+        _exiger(commande.pour in ConfigCommande.POUR,
+                f"commande « {commande.nom} » : « pour » doit valoir l'un de "
+                f"{', '.join(ConfigCommande.POUR)}")
+        _exiger(commande.cooldown_secondes >= 0,
+                f"commande « {commande.nom} » : cooldown négatif")
+        for appel in (commande.nom, *commande.alias):
+            appel = appel.lower().strip()
+            _exiger(appel not in noms_vus,
+                    f"« {appel} » est défini deux fois : la seconde commande "
+                    f"ne se déclencherait jamais")
+            noms_vus.add(appel)
+
     _exiger(config.niveau_journal in ("DEBUG", "INFO", "WARNING", "ERROR"),
             f"journal.niveau invalide : {config.niveau_journal!r}")
 
@@ -235,6 +285,19 @@ def depuis_dict(donnees: dict[str, Any]) -> Config:
             duree_exclusion_secondes=int(
                 mo.get("duree_exclusion_secondes", 600)),
         ),
+        commandes=tuple(
+            ConfigCommande(
+                nom=str(c.get("nom", "")).strip().lstrip("!").lower(),
+                reponse=str(c.get("reponse", "")).strip(),
+                alias=tuple(str(a).strip().lstrip("!").lower()
+                            for a in (c.get("alias") or ())),
+                pour=str(c.get("pour", "tous")),
+                cooldown_secondes=int(c.get("cooldown_secondes", 15)),
+            )
+            for c in (donnees.get("commandes") or [])
+            if isinstance(c, dict)),
+        commandes_inconnues_au_modele=bool(
+            donnees.get("commandes_inconnues_au_modele", False)),
         niveau_journal=str(_section(donnees, "journal").get("niveau", "INFO")).upper(),
     )
     valider(config)
@@ -339,6 +402,12 @@ def en_dict(config: Config) -> dict[str, Any]:
             "action": config.moderation.action,
             "duree_exclusion_secondes": config.moderation.duree_exclusion_secondes,
         },
+        "commandes": [
+            {"nom": c.nom, "reponse": c.reponse, "alias": list(c.alias),
+             "pour": c.pour, "cooldown_secondes": c.cooldown_secondes}
+            for c in config.commandes
+        ],
+        "commandes_inconnues_au_modele": config.commandes_inconnues_au_modele,
         "journal": {"niveau": config.niveau_journal},
     }
 

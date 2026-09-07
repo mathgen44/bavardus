@@ -13,8 +13,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from ..config import (Config, ConfigConversation, ConfigModele, ConfigModeration,
-                      ConfigPriseDeParole, ConfigSpontanee, ConfigTwitch, valider)
+from ..config import (Config, ConfigCommande, ConfigConversation, ConfigModele,
+                      ConfigModeration, ConfigPriseDeParole, ConfigSpontanee,
+                      ConfigTwitch, valider)
 
 
 def _bool(donnees, cle: str) -> bool:
@@ -43,6 +44,67 @@ def _liste(valeur: str) -> tuple[str, ...]:
         return ()
     brut = valeur.replace(",", "\n").splitlines()
     return tuple(sorted({m.strip().lower() for m in brut if m.strip()}))
+
+
+def lire_commandes(texte: str) -> tuple[ConfigCommande, ...]:
+    """Une commande par ligne : `!nom | réponse | options`.
+
+    Un tableau de formulaire aurait été plus joli et bien plus pénible à
+    éditer : ici, ajouter une commande c'est ajouter une ligne, et le champ
+    entier se copie-colle d'une instance à l'autre.
+
+    Options acceptées, séparées par des virgules : `alias=dc/serveur`,
+    `pour=moderateurs`, `cooldown=30`.
+    """
+    commandes = []
+    for ligne in (texte or "").splitlines():
+        ligne = ligne.strip()
+        if not ligne or ligne.startswith("#"):
+            continue
+        parts = [p.strip() for p in ligne.split("|")]
+        nom = parts[0].lstrip("!").lower()
+        reponse = parts[1] if len(parts) > 1 else ""
+        alias: tuple[str, ...] = ()
+        pour, cooldown = "tous", 15
+
+        for option in (parts[2].split(",") if len(parts) > 2 else []):
+            option = option.strip()
+            if "=" not in option:
+                continue
+            cle, valeur = (m.strip() for m in option.split("=", 1))
+            if cle == "alias":
+                alias = tuple(a.strip().lstrip("!").lower()
+                              for a in valeur.replace("/", ",").split(",")
+                              if a.strip())
+            elif cle == "pour":
+                pour = valeur.lower()
+            elif cle in ("cooldown", "cooldown_secondes"):
+                try:
+                    cooldown = int(valeur)
+                except ValueError:
+                    pass
+
+        commandes.append(ConfigCommande(nom=nom, reponse=reponse, alias=alias,
+                                        pour=pour, cooldown_secondes=cooldown))
+    return tuple(commandes)
+
+
+def ecrire_commandes(commandes) -> str:
+    """L'inverse, pour remplir le formulaire."""
+    lignes = []
+    for c in commandes:
+        options = []
+        if c.alias:
+            options.append("alias=" + "/".join(c.alias))
+        if c.pour != "tous":
+            options.append(f"pour={c.pour}")
+        if c.cooldown_secondes != 15:
+            options.append(f"cooldown={c.cooldown_secondes}")
+        ligne = f"!{c.nom} | {c.reponse}"
+        if options:
+            ligne += " | " + ", ".join(options)
+        lignes.append(ligne)
+    return "\n".join(lignes)
 
 
 def appliquer_formulaire(config: Config, donnees) -> Config:
@@ -98,6 +160,9 @@ def appliquer_formulaire(config: Config, donnees) -> Config:
         conversation=conversation,
         prise_de_parole=parole,
         moderation=moderation,
+        commandes=(lire_commandes(str(donnees["commandes"]))
+                   if "commandes" in donnees else config.commandes),
+        commandes_inconnues_au_modele=_bool(donnees, "commandes_inconnues_au_modele"),
     )
     valider(candidate)          # avant toute écriture sur disque
     return candidate

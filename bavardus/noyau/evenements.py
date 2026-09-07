@@ -18,9 +18,29 @@ class EvenementChat:
     auteur_id: str = ""
     # Identifiant Twitch du message : sans lui, impossible de le supprimer.
     message_id: str = ""
+    # Badges Twitch de l'auteur : broadcaster, moderator, subscriber, vip…
+    # Ils disent qui parle, ce qui sert autant à la modération (ne pas
+    # sanctionner un modérateur) qu'aux commandes réservées.
+    badges: tuple[str, ...] = ()
     horodatage: float = field(default_factory=time.time)
 
     genre = "chat"
+
+    @property
+    def est_diffuseur(self) -> bool:
+        return "broadcaster" in self.badges
+
+    @property
+    def est_moderateur(self) -> bool:
+        return "moderator" in self.badges or self.est_diffuseur
+
+    @property
+    def est_abonne(self) -> bool:
+        # Le diffuseur et ses modérateurs ne sont pas nécessairement
+        # abonnés, mais leur refuser une commande réservée aux abonnés
+        # n'aurait aucun sens.
+        return ("subscriber" in self.badges or "founder" in self.badges
+                or self.est_moderateur)
 
 
 @dataclass(frozen=True, slots=True)

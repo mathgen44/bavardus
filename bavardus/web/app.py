@@ -211,9 +211,11 @@ def creer_application(contexte: Contexte) -> FastAPI:
         if not connecte(requete):
             return RedirectResponse("/connexion", status_code=303)
         jeton_bot = contexte.jetons.get("bot")
+        from .formulaire import ecrire_commandes
         return rendre(requete, "reglages.html",
                       identite=session(requete), config=contexte.config,
                       nom_bot=jeton_bot.login if jeton_bot else "lebot",
+                      commandes_texte=ecrire_commandes(contexte.config.commandes),
                       erreur=erreur, info=info)
 
     @application.post("/reglages")
