@@ -12,19 +12,35 @@ services:
     # image: ghcr.io/mathgen44/bavardus:latest   # quand une image sera publiée
     container_name: bavardus
     restart: unless-stopped
+
+    # B15 : le conteneur tourne sous TON identifiant, pas sous celui de
+    # l'image. Le dossier ./donnees appartient à l'utilisateur de l'hôte et
+    # contient des fichiers en 600 (jetons, .env) ; un autre identifiant ne
+    # pourrait pas les lire, et le conteneur redémarrerait en boucle.
+    #
+    # 1000:1000 est le premier compte sur la plupart des systèmes. Si
+    # `id -u` renvoie autre chose, exporter avant `docker compose up` :
+    #     export BAVARDUS_UID=$(id -u) BAVARDUS_GID=$(id -g)
+    user: "${BAVARDUS_UID:-1000}:${BAVARDUS_GID:-1000}"
+
     ports:
       - "8475:8475"
     volumes:
       # Tout l'état de l'instance. À sauvegarder, rien d'autre.
       - ./donnees:/donnees
     environment:
+      # L'identifiant surchargé n'a pas de foyer dans l'image : sans cela,
+      # les bibliothèques qui cherchent ~ écrivent dans /, où elles n'ont
+      # aucun droit.
+      HOME: /donnees
+      TZ: Europe/Paris
       # Décommenter pour renseigner les secrets par l'environnement plutôt
       # que par le fichier .env du volume. B4 : l'environnement l'emporte
       # sur le fichier, et le démarrage le signale.
       # TWITCH_CLIENT_ID: ""
       # TWITCH_CLIENT_SECRET: ""
       # STREAMLABS_SOCKET_TOKEN: ""
-      TZ: Europe/Paris
+
     # Le conteneur détient des jetons Twitch : rien ne justifie de lui
     # laisser des privilèges dont il n'a pas l'usage.
     security_opt:

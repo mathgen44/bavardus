@@ -14,8 +14,12 @@ compatible avec les alertes Streamlabs.
 
 ```bash
 git clone https://github.com/mathgen44/bavardus.git && cd bavardus
+export BAVARDUS_UID=$(id -u) BAVARDUS_GID=$(id -g)   # si `id -u` ≠ 1000
 docker compose up -d
 ```
+
+Le conteneur tourne sous ton identifiant, afin de pouvoir lire le dossier `donnees/` et
+les fichiers de secrets qu'il contient (jetons et `.env`, en droits 600).
 
 Au premier démarrage la configuration est incomplète : le conteneur sert l'interface
 d'installation et attend. Ouvrir <http://localhost:8475>, suivre l'assistant, puis

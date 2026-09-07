@@ -17,11 +17,17 @@ ENV BAVARDUS_DONNEES=/donnees \
     PYTHONUNBUFFERED=1
 RUN mkdir -p /donnees
 
-# Utilisateur non privilégié : le conteneur détient des jetons donnant le
-# contrôle d'un compte Twitch, il n'a aucune raison de tourner en root.
+# Utilisateur non privilégié par défaut : le conteneur détient des jetons
+# donnant le contrôle d'un compte Twitch, il n'a aucune raison de tourner
+# en root.
+#
+# B15 : cet identifiant vaut pour un volume nommé. Avec un montage depuis
+# l'hôte — le cas de compose.yaml — il faut au contraire adopter celui du
+# propriétaire du dossier, sans quoi les fichiers en 600 (jetons, .env)
+# restent illisibles. compose.yaml le surcharge donc explicitement.
 RUN useradd --system --uid 10001 --home /donnees bavardus \
  && chown -R bavardus:bavardus /donnees
-USER bavardus
+USER 10001:10001
 
 VOLUME ["/donnees"]
 EXPOSE 8475

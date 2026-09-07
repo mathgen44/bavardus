@@ -200,6 +200,35 @@ Constaté au premier démarrage réel :
 >
 > B2 et B5–B9 restent inconnus.
 
+### B15 — Le conteneur redémarrait en boucle : `/donnees/.env` illisible
+**Ouvert et clos le 2026-09-07**
+
+Premier `docker compose up` : `PermissionError: [Errno 13] Permission denied:
+'/donnees/.env'`, conteneur en `Restarting` sans fin, et **502** sur l'interface publique.
+
+**Cause :** le Dockerfile crée un utilisateur non privilégié (uid 10001) et lui donne
+`/donnees`. Mais un **montage depuis l'hôte écrase ce dossier** : `./donnees` arrive avec
+le propriétaire de l'hôte (uid 1000) et des fichiers en 600 — jetons et `.env` — que
+l'uid 10001 ne peut pas lire. Le `chown` de l'image ne sert que pour un volume nommé.
+
+C'est le piège classique du montage depuis l'hôte avec un utilisateur non root ; il aurait
+dû être traité en écrivant `compose.yaml`.
+
+**Correction :** `compose.yaml` fixe `user: "${BAVARDUS_UID:-1000}:${BAVARDUS_GID:-1000}"`
+et `HOME=/donnees` — sans ce dernier, l'identifiant surchargé n'a pas de foyer dans
+l'image et les bibliothèques qui cherchent `~` écrivent dans `/`.
+
+**Point de vigilance :** Docker Compose lit le fichier `.env` situé **à côté de
+`compose.yaml`** pour ses propres variables. En exécution native, le `.env` applicatif se
+trouve justement là. Sans conséquence tant qu'aucun secret ne contient de `$` — sinon,
+doubler le caractère (`$$`) ou lancer `docker compose --env-file /dev/null`.
+
+**Note de méthode :** un 502 signalait ici un backend absent, là où B10 en donnait un 404
+dans une situation voisine. Ces codes ne se déduisent pas ; les logs du service, eux, ont
+nommé la cause en une ligne.
+
+---
+
 ### B14 — Une dépendance manquante produisait une trace illisible
 **Ouvert et clos le 2026-09-07**
 
